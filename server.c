@@ -3,6 +3,8 @@
 
 	Contient la gestion du server de jeu 
 */
+#include "util.h"
+
 #include    <stdio.h>
 #include    <string.h>
 #include    <stdlib.h>
@@ -25,6 +27,7 @@ int main(int argc, char** argv){
 	struct sockaddr_in addr;
 	char buffer[BUFFER_SIZE];
 	int nbJoueur=0;
+	struct message *msg;
 
 	//Gestion du select
 	int retval;
@@ -40,6 +43,11 @@ int main(int argc, char** argv){
 	perror("server - Probleme socket");
 	exit(1);
 }
+
+if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
+		perror("Erreur lors de l'allocation de memoire pour un message...\n");
+		exit(2);
+	}
     bzero((char*)&addr,sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -71,6 +79,12 @@ int main(int argc, char** argv){
 		fprintf(stderr,"Connexion recu de %s\n",inet_ntoa(addr2.sin_addr));
 		FILE *netFd = fdopen(sck2,"r");
 		nbJoueur++;
+
+		/*
+			if(msg->code == CONNECTION){
+				fprintf(stderr, "Joueur connecte : %s \n",msg->contenu);
+			}
+		*/
 		while(fgets(buffer,BUFFER_SIZE,netFd)){
 			fprintf(stderr, "Joueur connecte : %s \n",buffer );
 		}

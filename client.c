@@ -3,6 +3,7 @@
 
 	Contient la gestion joueur 
 */
+#include "util.h"
 
 #include    <netdb.h>
 #include    <stdio.h>
@@ -24,6 +25,8 @@ int main(int argc, char** argv){
 	struct sockaddr_in addr;
 	struct hostent *host;
 	signal(SIGPIPE,err_handler);
+	struct message *msg;
+
 	if(argc != 2){
 		fprintf(stderr, "Usage: %s  ip\n",argv[0]);
 		exit(1);
@@ -39,12 +42,25 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 
+	if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
+		perror("Erreur lors de l'allocation de memoire pour un message...\n");
+		exit(2);
+	}
+
 	bzero((char*)&addr, sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
 	bcopy(host->h_addr,(char*)&addr.sin_addr.s_addr,host->h_length);
     addr.sin_port = htons(PORT);
 
     fprintf(stderr, "Veuillez entrer votre pseudo\n");
+    /*
+    if((lectureRet = read(0, buffer, BUFFER_SIZE)) == -1) {
+		perror("Erreur lors de la lecture au clavier...\n");
+		exit(2);
+	}
+	msg->code = CONNEXION
+	strcpy(msg->contenu, strtok(buffer, "\n")); 
+    */
     fgets(buffer,BUFFER_SIZE,stdin);
 
     if(connect(sck, (struct sockaddr *)&addr,sizeof(addr)) < 0){
