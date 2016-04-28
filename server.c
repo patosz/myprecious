@@ -71,7 +71,7 @@ if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
             printf("Temps imparti de connection dépassé, debut de la partie... \n");
  		}
 		if(MAX_JOUEUR == nbJoueur){
-			return;
+			break;
 		}
 		struct sockaddr_in addr2;
 		u_int len2 = sizeof(addr2);
