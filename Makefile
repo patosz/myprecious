@@ -5,4 +5,4 @@ serveur : server.c util.h
 	gcc -o server server.c
   
 clean :
-	rm client serveur
+	rm client server
