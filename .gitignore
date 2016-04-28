@@ -30,3 +30,7 @@
 
 # Debug files
 *.dSYM/
+
+#compiled server and client
+client
+server
