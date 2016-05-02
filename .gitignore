@@ -30,7 +30,11 @@
 
 # Debug files
 *.dSYM/
+*.stackdump
 
-#compiled server and client
+# Compiled server and client
 client
 server
+
+# Ignore VSCode files
+.vscode

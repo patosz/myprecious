@@ -73,8 +73,21 @@ int main(int argc, char** argv){
 			perror("Erreur lors de l'acceptation d'un participant...\n");
             exit(1);
 		}
+<<<<<<< HEAD
 
 		FD_SET(sck2, &fdsetJoueurs);
+=======
+		//On check le timer
+		if(retval ==0){
+            printf("Temps imparti de connection dépassé, debut de la partie... \n");
+ 		}
+		if(MAX_JOUEUR == nbJoueur){
+			break;
+		}
+		struct sockaddr_in addr2;
+		u_int len2 = sizeof(addr2);
+		int sck2 = accept(sck,(struct sockaddr *)&addr2,&len2);
+>>>>>>> 40dd142bd1dfa4236f776d451ca60d78821c5e88
 		fprintf(stderr,"Connexion recu de %s\n",inet_ntoa(addr2.sin_addr));
 
 		if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
