@@ -21,17 +21,20 @@
 #define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
 #define BUFFER_SIZE 512
 #define MAX_JOUEUR 4
-#define TIMEOUT_CONNECTION 30
+#define TIMEOUT_CONNECTION 10
 int main(int argc, char** argv){
-	int sck;
+	int sck,lectureRet;
+	int sck2,nbrefds;
 	struct sockaddr_in addr;
 	char buffer[BUFFER_SIZE];
 	int nbJoueur=0;
 	struct message *msg;
+	struct sockaddr_in addr2;
 
-	//Gestion du select
 	int retval;
 	fd_set rfds;
+	fd_set fdsetServeur;
+	fd_set fdsetJoueurs;
 	struct timeval tv;
 	srand(time(NULL)); 
     FD_ZERO(&rfds);
@@ -39,55 +42,70 @@ int main(int argc, char** argv){
     tv.tv_sec = TIMEOUT_CONNECTION;
     tv.tv_usec = 0;
 
+
 	if( (sck = socket(AF_INET,SOCK_STREAM,0)) < 0 ){
 	perror("server - Probleme socket");
 	exit(1);
 }
 
-if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
-		perror("Erreur lors de l'allocation de memoire pour un message...\n");
-		exit(2);
-	}
+
     bzero((char*)&addr,sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(PORT);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if(bind(sck,(struct sockaddr *)&addr, sizeof(addr)) < 0){
 		perror("server - Probleme bind");
 	}
 
 	fprintf(stderr,"Server en ecoute pour connexions\n");
-	listen(sck,1);
+	if(listen(sck,MAX_JOUEUR)<0){
+		perror("Erreur lors de l'ecoute de demandes de connexion...\n");
+	}
+
+	u_int len2 = sizeof(addr2);
+	FD_SET(sck, &fdsetServeur);
+
 
 	//Server ready - Ecoute connection
 	while(1){
-		if(nbJoueur==1){
-			//on lance le timer
-			SYS(retval = select(1, &rfds, NULL, NULL, &tv));
+		if((sck2 = accept(sck,(struct sockaddr *)&addr2,&len2))<0){
+			perror("Erreur lors de l'acceptation d'un participant...\n");
+            exit(1);
 		}
-		//On check le timer
-		if(retval ==0){
-            printf("Temps imparti de connection dépassé, debut de la partie... \n");
- 		}
-		if(MAX_JOUEUR == nbJoueur){
-			return;
-		}
-		struct sockaddr_in addr2;
-		u_int len2 = sizeof(addr2);
-		int sck2 = accept(sck,(struct sockaddr *)&addr2,&len2);
-		fprintf(stderr,"Connexion recu de %s\n",inet_ntoa(addr2.sin_addr));
-		FILE *netFd = fdopen(sck2,"r");
-		nbJoueur++;
 
-		/*
-			if(msg->code == CONNECTION){
-				fprintf(stderr, "Joueur connecte : %s \n",msg->contenu);
-			}
-		*/
-		while(fgets(buffer,BUFFER_SIZE,netFd)){
-			fprintf(stderr, "Joueur connecte : %s \n",buffer );
+		FD_SET(sck2, &fdsetJoueurs);
+		fprintf(stderr,"Connexion recu de %s\n",inet_ntoa(addr2.sin_addr));
+
+		if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
+		perror("Erreur lors de l'allocation de memoire pour un message...\n");
+		exit(2);
 		}
+
+		if((lectureRet = read(sck2, msg, sizeof(struct message))) == -1) {
+			perror("Erreur lors de la lecture du message...\n");
+			exit(2);
+		}
+		if(msg->code == CONNEXION){
+				strcpy(buffer, msg->contenu);
+				fprintf(stdout, "Un joueur s'est inscrit, voici son nom : %s\n", buffer);
+				msg->code= EN_ATTENTE;
+				nbJoueur++;
+		}
+		if(nbJoueur >= MAX_JOUEUR) {
+			fprintf(stdout, "La limite de joueurs est atteinte! Le jeu va commencer!\n");
+			break;
+		}
+		// on a inscrit le joueur précédent, on peut écouter les demandes des autres joueurs
+                if((nbrefds = select(sck + 1, &fdsetServeur, NULL, NULL, &tv)) < 0) {
+                        perror("Erreur lors de l'attente des autres joueurs...\n");
+                        exit(1);
+                }
+		// si le temps de connection a expire il faut arreter la boucle
+                if(nbrefds == 0) {
+                	printf("Temps imparti de connection dépassé, debut de la partie... \n");
+                    break;
+                }	
 	}
 
 }
