@@ -15,12 +15,31 @@
 #include    <netinet/in.h>
 #define PORT 8765
 #define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
+<<<<<<< HEAD
 #define BUFFER_SIZE 256
+=======
+<<<<<<< HEAD
+#define BUFFER_SIZE 256
+=======
+#define BUFFER_SIZE 512
+
+// Methods declaration
+>>>>>>> 40dd142bd1dfa4236f776d451ca60d78821c5e88
+>>>>>>> be47e05d23dc5f39abd105cef5cb2e1bfd830670
 extern void err_handler(int);
 
 int main(int argc, char** argv){
+<<<<<<< HEAD
 	int sck,port,lectureRet,writeRet;
 	char buffer[BUFFER_SIZE];
+=======
+<<<<<<< HEAD
+	int sck,port,lectureRet,writeRet;
+	char buffer[BUFFER_SIZE];
+=======
+	int sck;
+>>>>>>> 40dd142bd1dfa4236f776d451ca60d78821c5e88
+>>>>>>> be47e05d23dc5f39abd105cef5cb2e1bfd830670
 	struct sockaddr_in addr;
 	struct hostent *host;
 	signal(SIGPIPE,err_handler);
@@ -50,6 +69,7 @@ int main(int argc, char** argv){
 	addr.sin_family = AF_INET;
 	bcopy(host->h_addr,(char*)&addr.sin_addr.s_addr,host->h_length);
     addr.sin_port = htons(PORT);
+<<<<<<< HEAD
 
     if(connect(sck, (struct sockaddr *)&addr,sizeof(addr)) < 0){
     	perror("Client - Probleme connect");
@@ -63,6 +83,41 @@ int main(int argc, char** argv){
 		perror("Erreur lors de la lecture au clavier...\n");
 		exit(2);
 	}
+=======
+	
+
+<<<<<<< HEAD
+    if(connect(sck, (struct sockaddr *)&addr,sizeof(addr)) < 0){
+    	perror("Client - Probleme connect");
+    	exit(1);
+    }
+
+    fprintf(stderr, "Veuillez entrer votre pseudo\n");
+    
+    
+=======
+    fprintf(stdout, "Veuillez entrer votre pseudo\n");
+    /*
+>>>>>>> 40dd142bd1dfa4236f776d451ca60d78821c5e88
+    if((lectureRet = read(0, buffer, BUFFER_SIZE)) == -1) {
+		perror("Erreur lors de la lecture au clavier...\n");
+		exit(2);
+	}
+
+	strtok(buffer, "\n");
+
+	strcpy(msg->contenu,buffer);
+	msg->code = CONNEXION;
+	
+	if((writeRet = write(sck, msg, sizeof(struct message))) == -1) {
+			perror("Impossible d'ecrire un message au serveur...\n");
+			exit(1);
+	}
+
+	fprintf(stderr, "Client connecte !\n");
+
+}
+>>>>>>> be47e05d23dc5f39abd105cef5cb2e1bfd830670
 
 	strtok(buffer, "\n");
 
