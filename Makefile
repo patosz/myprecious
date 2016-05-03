@@ -6,3 +6,4 @@ serveur : server.c util.h
   
 clean :
 	rm client server
+	
