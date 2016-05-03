@@ -44,12 +44,18 @@ int main(int argc, char** argv){
 
 	alloc_msg(msg);
 
-	//bcopy et bzero sont dépréciées selon le MAN
-	memset((char*)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family = AF_INET;
-	memcpy((char*) &addr.sin_addr.s_addr, host->h_addr, host->h_length);
-    addr.sin_port = htons(PORT);
-
+	prepare_sock_adr(&addr, host);
+	
+	/*
+		//bcopy et bzero sont dépréciées selon le MAN
+		memset((char*)&addr, 0, sizeof(struct sockaddr_in));
+		addr.sin_family = AF_INET;
+		memcpy((char*) &addr.sin_addr.s_addr, host->h_addr, host->h_length);
+		addr.sin_port = htons(PORT);	
+	*/
+	
+	connecter_socket();
+		
     if(connect(sck, (struct sockaddr *)&addr,sizeof(addr)) < 0){
     	perror("Client - Probleme connect");
     	exit(1);
@@ -96,9 +102,15 @@ void get_socket(int *sck){
 	}
 }
 
-void get_host(struct hostent* ht, char* url){
+/*
+ * pour modifier la valeur d'un pointeur(*), 
+ * il faut déclarer un pointeur sur pointeur(**)
+ * et modifier la valeur du **
+ * -> C passe les parameutre en les copiant, MEME LES POINEURS !!
+*/
+void get_host(struct hostent** ht, char* url){
 	printf("URL : %s \n",*url);
-	ht = gethostbyname(url);
+	*ht = gethostbyname(url);
 	if(ht == NULL){
 		fprintf(stderr, "Host inconnu");
 		exit(1);
@@ -110,4 +122,12 @@ void alloc_msg(struct message* msg){
 		perror("Erreur lors de l'allocation de memoire pour un message...\n");
 		exit(2);
 	}
+}
+
+function prepare_sock_adr(struct sockaddr_in** addr, struct hostent* host){
+	//TODO finir et debugger
+	memset((char*)*addr, 0, sizeof(struct sockaddr_in));
+	addr->sin_family = AF_INET;
+	memcpy((char*) addr->sin_addr->s_addr, host->h_addr, host->h_length);
+    addr->sin_port = htons(PORT);	
 }
