@@ -6,7 +6,7 @@
 #define _SHM_H_
 
 
-#include "util.c"
+#include "util.h"
 
 void create_shm(key_t);
 void detach_shm(void*);

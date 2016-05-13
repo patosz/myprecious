@@ -9,19 +9,22 @@ void sem_init(key_t key) {
     sb.sem_op = 1;
     sb.sem_flg = 0;
 
-    if ((semid = semget(key, 2, IPC_CREAT | 0666)) < 0)
-        error("Erreur à  la création du sémaphore");
+    if ((semid = semget(key, 2, IPC_CREAT | 0666)) < 0){
+        perror("Erreur à  la création du sémaphore");
+    }
+    
+    sb.sem_num = 0;
+    
+    if (semop(semid, &sb, 1) == -1){
+        perror("Erreur à  la création du sémaphore");
+    }
 
     sb.sem_num = 0;
     if (semop(semid, &sb, 1) == -1)
-        error("Erreur à  la création du sémaphore");
-
-    sb.sem_num = 0;
-    if (semop(semid, &sb, 1) == -1)
-        error("Erreur à  la création du sémaphore");
+        perror("Erreur à  la création du sémaphore");
 
     create_shm_nb_lecteurs(KEY_RC);
-    *nb_lecteursSem =  attach_to_shm_nb_lecteurs(KEY_RC);
+    nb_lecteursSem =  attach_to_shm_nb_lecteurs(KEY_RC);
     *nb_lecteursSem = 0;
 }
 

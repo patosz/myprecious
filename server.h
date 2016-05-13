@@ -8,7 +8,7 @@
 #if !defined SERVER_H
 #define SERVER_H
 
-#include "util.h"
+#include "semaphore.h"
 
 struct message* lire_msg(int sck,struct message *msg);
 void ecrire_msg(int sck, struct message *msg);

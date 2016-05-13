@@ -2,9 +2,7 @@
 	HOFFMANN XAVIER xhoffma15
 	Contient la gestion du server de jeu 
 */
-#include "util.c"
 #include "server.h"
-#include "semaphore.c"
 
 #define PORT 8765
 #define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)

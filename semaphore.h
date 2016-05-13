@@ -2,7 +2,7 @@
 #define _SEMAPHORE_H_
 
 
-#include "shm.c"
+#include "shm.h"
 
 void sem_init(key_t);
 void sem_up(int numSem);
