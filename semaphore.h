@@ -1,8 +1,15 @@
 #ifndef _SEMAPHORE_H_
 #define _SEMAPHORE_H_
 
+#include <errno.h>
+#include <stdio.h>
+
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#include <sys/types.h>
 
 #include "shm.h"
+#include "util.h"
 
 void sem_init(key_t);
 void sem_up(int numSem);

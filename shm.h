@@ -5,6 +5,12 @@
 #ifndef _SHM_H_
 #define _SHM_H_
 
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #include "util.h"
 

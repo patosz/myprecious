@@ -2,19 +2,7 @@
 	HOFFMANN XAVIER xhoffma15
 	Contient la gestion joueur 
 */
-#include "util.h"
 #include "client.h"
-
-#include    <netdb.h>
-#include    <stdio.h>
-#include    <string.h>
-#include    <stdlib.h>
-#include 	<signal.h>
-
-#include    <netinet/in.h>
-
-#include    <sys/socket.h>
-#include    <sys/types.h>
 
 #define PORT 8765
 #define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)

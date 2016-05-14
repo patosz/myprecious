@@ -6,26 +6,6 @@
 *
 *	Entête commune au client et au serveur. 
 */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <strings.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <netdb.h>
-#include <time.h>
-#include <netinet/in.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/sem.h>
-#include <sys/shm.h>
-#include <sys/ipc.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 #if !defined UTIL_H
 
