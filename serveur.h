@@ -38,4 +38,6 @@
 struct message* lire_msg(int sck,struct message *msg);
 void ecrire_msg(int sck, struct message *msg);
 void  INThandler(int sig);
+void onTimerEnd();
+
 #endif

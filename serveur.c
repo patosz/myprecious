@@ -8,9 +8,10 @@
 #define BUFFER_SIZE 512
 
 
+static int nbJoueurs = 0;
 static int phaseInscription = TRUE;
 static joueur joueurs[MAX_JOUEUR];
-
+static int sockets[MAX_JOUEUR];
 
 int main(int argc, char** argv){
     
@@ -21,7 +22,6 @@ int main(int argc, char** argv){
     int nbrefds;
 	struct sockaddr_in addr;
 	char buffer[BUFFER_SIZE];
-	int nbJoueurs = 0;
 	struct message *msg;
 	struct sockaddr_in addr2;
 
@@ -40,6 +40,8 @@ int main(int argc, char** argv){
 
     //Creation d'un signal pour lors d'un ctrl c, on kill la shm
     signal(SIGINT, INThandler);
+	//Creation d'un handler pour le timer
+	signal(SIGALRM, onTimerEnd);
 
 	if( (sck_srv = socket(AF_INET,SOCK_STREAM,0)) < 0 ){
 	    perror("server - Probleme socket");
@@ -72,7 +74,6 @@ int main(int argc, char** argv){
 		exit(2);
 	}
 	
-	
 	//Server ready - Ecoute connection
 	while(phaseInscription && nbJoueurs < MAX_JOUEUR){
 		if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2))<0){
@@ -87,14 +88,24 @@ int main(int argc, char** argv){
 		if(msg->code == CONNEXION){
             strcpy(buffer, msg->contenu);
             fprintf(stdout, "Un joueur s'est inscrit, voici son nom : %s\n", buffer);
-            msg->code= EN_ATTENTE;
+
+			joueur j = (joueur) {.pseudo = buffer,.score = 0};
+			printf("Joueur crée : %s\n",j.pseudo);
+			
+			joueurs[nbJoueurs] = j;
             nbJoueurs++;
+			
+			msg->code= EN_ATTENTE;
             ecrire_msg(sck_cl,msg);
+			if(nbJoueurs == 1){
+				alarm(TIMEOUT_CONNECTION);
+			}
 		}
         
-		if(nbJoueurs >= MAX_JOUEUR) {
+		if(nbJoueurs == MAX_JOUEUR) {
+			phaseInscription = FALSE;
+			alarm(0);
 			fprintf(stdout, "La limite de joueurs est atteinte! Le jeu va commencer!\n");
-			break;
 		}
 		
         // on a inscrit le joueur précédent, on peut écouter les demandes des autres joueurs
@@ -136,4 +147,9 @@ void ecrire_msg(int sck, struct message *msg){
 void  INThandler(int sig){
 	signal(sig, SIG_IGN);
 	exit(2);
+}
+
+void onTimerEnd(){
+	phaseInscription = FALSE;
+	printf("Le temps d'inscription est écoulé.\n");
 }

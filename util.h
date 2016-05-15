@@ -49,7 +49,7 @@ typedef struct message {
 } message;
 
 typedef struct joueur {
-	char pseudo;
+	char* pseudo;
 	int score;
 } joueur;
 
