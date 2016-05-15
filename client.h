@@ -23,14 +23,23 @@
 
 #include "util.h"
 
-void check_args(int*,char**);
-void get_socket(int*);
-void get_host(struct hostent** host, char* url);
-void alloc_msg(struct message** msg);
-struct message* recevoir_msg(int sck,struct message *msg);
-void envoyer_msg(int sck, struct message *msg);
-void handleMessage(int messageCode);
+void check_args(int* argc, char** argv);
+void get_socket();
+void get_host(char* url);
+void malloc_msg();
+void init_address();
+void connect_to_server();
+struct message* recevoir_msg(struct message *msg);
+void envoyer_msg(struct message *msg);
+void handleMessage(struct message *msg);
 void onPartieAnnulee();
 void onDebutPartie();
+void onFinPartie();
+void onJouerCarte();
+void onEnvoiDeck(char* contenu);
+void onRenvoiCarte(char* contenu);
+void onScoreManche();
+void onFinManche();
+
 
 #endif

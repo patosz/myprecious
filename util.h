@@ -20,7 +20,7 @@
 
 #define EN_ATTENTE 0
 #define CONNEXION 1
-#define DECONNECTION 2
+#define DECONNEXION 2
 #define PARTIE_ANNULEE 3
 #define DEBUT_PARTIE 4
 #define FIN_PARTIE 5

@@ -34,7 +34,7 @@
 
 # Compiled server and client
 client
-server
+serveur
 
 # Ignore VSCode files
 .vscode
