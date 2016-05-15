@@ -165,6 +165,7 @@ void connect_to_server(){
 void onPartieAnnulee(){
 	printf("Partie annulée car nombre de joueurs insuffisant.\n");
 	printf("Le programme va quitter.\n");
+	exit(1);
 }
 
 void onDebutPartie(){

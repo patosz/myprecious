@@ -17,6 +17,8 @@ static fd_set all_fds;
 
 int main(int argc, char** argv){
     
+	//TODO ajouter un fichier de lock et vérifier son exitence pour ne pas lancer 2 fois le serveur
+	
 	int sck_srv;
 	int sck_cl;
     int nbrefds;
@@ -35,9 +37,14 @@ int main(int argc, char** argv){
 	}
 	
 	//Creation d'un signal pour lors d'un ctrl c, on kill la shm
-    signal(SIGINT, INThandler);
+	struct sigaction actionInt;
+	actionInt.sa_handler = INThandler;
+	SYS(sigaction(SIGINT,&actionInt,0));
+	
 	//Creation d'un handler pour le timer
-	signal(SIGALRM, onTimerEnd);
+	struct sigaction actionAlarm;
+	actionAlarm.sa_handler = onTimerEnd;
+	SYS(sigaction(SIGALRM,&actionAlarm,0));
 	
 	//Init time	
 	srand(time(NULL));
@@ -75,7 +82,8 @@ int main(int argc, char** argv){
 	printf("Server en ecoute de connexions.\n");
 
 	//Init shm
-	create_shm(IDSHM);
+	//TODO à réparer car ne fonctionne pas
+	//create_shm(IDSHM);
 	
 	//Malloc msg
 	if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
@@ -89,14 +97,21 @@ int main(int argc, char** argv){
 	//Set server socket as highest fd
 	fdmax = sck_srv;
 	
+	//Mask SIGALARM to not interrupt select
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask,SIGALRM);
+
 	//Server ready - Ecoute connection
 	while(phaseInscription){
+		SYS(sigprocmask(SIG_BLOCK, &mask, NULL));
+		
 		read_fds = all_fds; // Reinit read_fds because select modifies it
         if (select(fdmax+1, &read_fds, NULL, NULL, &tv) == -1) {
             perror("Erreur du select phase inscription.");
             exit(4);
         }
-		
+
 		// parcourir les connexions existantes en recherche d'une connexion à lire
 		int i;
 		for(i = 0; i <= fdmax; i++) {
@@ -127,7 +142,9 @@ int main(int argc, char** argv){
 								alarm(INSCRIPTION_TIME);
 							}
 														
-							joueurs[getFreePlace()] = j;
+							int idx = getFreePlace();
+							joueurs[idx] = j;
+							sockets[idx] = sck_cl;
 							nbJoueurs++;
 							
 							FD_SET(sck_cl, &all_fds); // add to all_fds set
@@ -162,6 +179,9 @@ int main(int argc, char** argv){
                 } // END handle data from client
             } // END got new incoming connection
 		}
+		
+		//Let alarm execute it's handler
+		SYS(sigprocmask(SIG_UNBLOCK, &mask, NULL));
 	}
 	
 	printf("La phase d'inscription est terminée.\n");
@@ -180,6 +200,8 @@ int main(int argc, char** argv){
 	
 	if(nbJoueurs < MIN_JOUEUR){
 		resetPartie();
+		printf("exit au lieu de reset partie \n");
+		exit(1);
 	}
 	
 	//Debut partie
@@ -243,4 +265,7 @@ void  INThandler(int sig){
 void onTimerEnd(){
 	phaseInscription = FALSE;
 	printf("Le temps d'inscription est écoulé.\n");
+	sigset_t mask;
+	sigemptyset(&mask);
+	SYS(sigprocmask(SIG_SETMASK,&mask,NULL));
 }

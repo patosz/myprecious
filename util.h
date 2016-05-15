@@ -18,7 +18,7 @@
 
 #define TIMEOUT_CONNECTION 30
 
-#define INSCRIPTION_TIME 10
+#define INSCRIPTION_TIME 5
 
 #define IDSHM 1234
 #define KEY_RC 4567
