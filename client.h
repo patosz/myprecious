@@ -40,6 +40,7 @@ void onEnvoiDeck(char* contenu);
 void onRenvoiCarte(char* contenu);
 void onScoreManche();
 void onFinManche();
-
+void onConnectionLost();
+void onExit();
 
 #endif

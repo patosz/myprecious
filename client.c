@@ -11,20 +11,27 @@
 #define PORT 8765
 #define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
 #define BUFFER_SIZE 512
-
-extern void err_handler(int);
+#define TRUE 1
+#define FALSE 0
 
 static int sck;
 static struct sockaddr_in addr;
 static struct hostent *host;
 static struct message *msg;
+static int nbCartesDeck = -1;
+static int nbCartesDefausse = -1;
+static int deck[52];
+static int defausse[52];
+static int partieInterrompue = FALSE;
+
 
 int main(int argc, char** argv){
 	int ecritureRet;
 	int lectureRet;
 	char buffer[BUFFER_SIZE];
 	
-	signal(SIGPIPE,err_handler);
+	signal(SIGPIPE,onConnectionLost);
+	signal(SIGINT,onExit);
 
 	check_args(&argc, argv);
 	
@@ -51,20 +58,15 @@ int main(int argc, char** argv){
 	strcpy(msg->contenu,buffer);
 	msg->code = CONNEXION;
 
-
 	envoyer_msg(msg);
 
-	msg = recevoir_msg(msg);
-	
-	handleMessage(msg);
-
-	
-
-	//ecoute message serveur
-	while(1){
-		
+	//joueur inscrit
+	while(TRUE){
+		//attendre le message du serveur
+		msg = recevoir_msg(msg);
+		//traiter le message
+		handleMessage(msg);
 	}
-
 }
 
 struct message* recevoir_msg(struct message *msg){
@@ -79,14 +81,9 @@ struct message* recevoir_msg(struct message *msg){
 void envoyer_msg(struct message *msg){
 	int ecritureRet;
 	if((ecritureRet = write(sck, msg, sizeof(struct message))) == -1) {
-			perror("Impossible d'ecrire un message au serveur...\n");
-			exit(1);
+		perror("Impossible d'ecrire un message au serveur...\n");
+		exit(1);
 	}
-}
-
-void err_handler(int unused){
-	fprintf(stderr, "Connection perdue ! \n");
-	return;
 }
 
 void check_args(int *argc, char** argv){
@@ -169,13 +166,36 @@ void connect_to_server(){
 	}
 }
 
-void sendConnectionMessage(){}
+void onPartieAnnulee(){
+	printf("Partie annulée car nombre de joueurs insuffisant.\n");
+	printf("Le programme va quitter.\n");
+}
 
-void onPartieAnnulee(){}
-void onDebutPartie(){}
+void onDebutPartie(){
+	//attacher les mémoires
+	//attendre le message avec le deck
+}
+
 void onFinPartie(){}
+
 void onJouerCarte(){}
+
 void onEnvoiDeck(char* contenu){}
+
 void onRenvoiCarte(char* contenu){}
+
 void onScoreManche(){}
+
 void onFinManche(){}
+
+void onConnectionLost(){
+	perror("Connexion au serveur perdue ! \n");
+	raise(SIGINT);
+}
+
+void onExit(){
+	printf("Le programme va quitter.\n");
+	//detach shared memory
+	//exit
+	exit(1);
+}

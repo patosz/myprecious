@@ -42,6 +42,6 @@ typedef struct message {
 typedef struct joueur {
 	char pseudo;
 	int score;
-}joueur;
+} joueur;
 
 #endif
