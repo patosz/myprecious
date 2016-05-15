@@ -4,10 +4,13 @@
 */
 #include "serveur.h"
 
-#define PORT 8765
-#define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
+
 #define BUFFER_SIZE 512
-#define TIMEOUT_CONNECTION 30
+
+
+static int phaseInscription = TRUE;
+static joueur joueurs[MAX_JOUEUR];
+
 
 int main(int argc, char** argv){
     
@@ -18,7 +21,7 @@ int main(int argc, char** argv){
     int nbrefds;
 	struct sockaddr_in addr;
 	char buffer[BUFFER_SIZE];
-	int nbJoueur=0;
+	int nbJoueurs = 0;
 	struct message *msg;
 	struct sockaddr_in addr2;
 
@@ -42,7 +45,7 @@ int main(int argc, char** argv){
 	    perror("server - Probleme socket");
 	    exit(1);
     }
-
+	
 
     bzero((char*)&addr,sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
@@ -53,42 +56,43 @@ int main(int argc, char** argv){
 		perror("server - Probleme bind");
 	}
 
-	fprintf(stderr,"Server en ecoute pour connexions\n");
+	
 	if(listen(sck_srv,MAX_JOUEUR)<0){
 		perror("Erreur lors de l'ecoute de demandes de connexion...\n");
 	}
+	fprintf(stderr,"Server en ecoute de connexions\n");
 
 	u_int len2 = sizeof(addr2);
 	FD_SET(sck_srv, &fdsetServeur);
 
 	create_shm(IDSHM);
 
+	if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
+		perror("Erreur lors de l'allocation de memoire pour un message...\n");
+		exit(2);
+	}
+	
+	
 	//Server ready - Ecoute connection
-	while(1){
+	while(phaseInscription && nbJoueurs < MAX_JOUEUR){
 		if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2))<0){
 			perror("Erreur lors de l'acceptation d'un participant...\n");
             exit(1);
 		}
 
 		FD_SET(sck_cl, &fdsetJoueurs);
-		fprintf(stderr,"Connexion recu de %s\n",inet_ntoa(addr2.sin_addr));
+		fprintf(stderr,"Connexion recue de %s\n",inet_ntoa(addr2.sin_addr));
 
-		if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
-		    perror("Erreur lors de l'allocation de memoire pour un message...\n");
-		    exit(2);
-		}
-
-		
 		msg = lire_msg(sck_cl,msg);
 		if(msg->code == CONNEXION){
             strcpy(buffer, msg->contenu);
             fprintf(stdout, "Un joueur s'est inscrit, voici son nom : %s\n", buffer);
             msg->code= EN_ATTENTE;
-            nbJoueur++;
+            nbJoueurs++;
             ecrire_msg(sck_cl,msg);
 		}
         
-		if(nbJoueur >= MAX_JOUEUR) {
+		if(nbJoueurs >= MAX_JOUEUR) {
 			fprintf(stdout, "La limite de joueurs est atteinte! Le jeu va commencer!\n");
 			break;
 		}
@@ -105,8 +109,6 @@ int main(int argc, char** argv){
             break;
         }	
 	}
-
-	
 
 	//Debut partie
 	while(1){

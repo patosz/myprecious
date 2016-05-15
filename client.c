@@ -8,11 +8,7 @@
  
 #include "client.h"
 
-#define PORT 8765
-#define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
 #define BUFFER_SIZE 512
-#define TRUE 1
-#define FALSE 0
 
 static int sck;
 static struct sockaddr_in addr;

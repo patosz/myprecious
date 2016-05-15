@@ -11,12 +11,21 @@
 
 #define UTIL_H 
 
+#define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
+
+#define TRUE 1
+#define FALSE 0
+
+#define TIMEOUT_CONNECTION 30
+
 #define IDSHM 1234
 #define KEY_RC 4567
 #define SEM_READ 0
 #define SEM_WRITE 1
 
 #define MAX_JOUEUR 4
+
+#define PORT 8765
 
 #define EN_ATTENTE 0
 #define CONNEXION 1
