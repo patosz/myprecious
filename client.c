@@ -1,18 +1,23 @@
-/* DOLEGA PATRYCJUSZ pdolega15
-	HOFFMANN XAVIER xhoffma15
-	Contient la gestion joueur 
-*/
+ /**************************************************************
+ *	DOLEGA PATRYCJUSZ pdolega15
+ *	HOFFMANN XAVIER xhoffma15
+ *	Projet Unix: "Bataille"
+ *
+ *	Fichier implémentant le comportement du client. 
+ **************************************************************/
+ 
 #include "client.h"
 
 #define PORT 8765
 #define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
 #define BUFFER_SIZE 512
 
-// Methods declaration
 extern void err_handler(int);
 
 int main(int argc, char** argv){
-	int sck, ecritureRet,lectureRet;
+	int sck;
+	int ecritureRet;
+	int lectureRet;
 	char buffer[BUFFER_SIZE];
 	struct sockaddr_in addr;
 	struct hostent *host;
@@ -23,19 +28,10 @@ int main(int argc, char** argv){
 	
 	get_socket(&sck);
 
-	//TODO: cette fonction foire
-	//get_host(host, argv[1]);
-	host = gethostbyname(argv[1]);
-	if(host == NULL){
-		fprintf(stderr, "Host inconnu");
-		exit(1);
-	}
-
-	if((msg = (struct message*) malloc(sizeof(struct message))) == NULL) {
-		perror("Erreur lors de l'allocation de memoire pour un message...\n");
-		exit(2);
-	}
-
+	get_host(&host, argv[1]);
+	
+	alloc_msg(&msg);
+	
 	//bcopy et bzero sont dépréciées selon le MAN
 	memset((char*)&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family = AF_INET;
@@ -46,35 +42,36 @@ int main(int argc, char** argv){
     	perror("Client - Probleme connect");
     	exit(1);
     }
-
-    fprintf(stderr, "Veuillez entrer votre pseudo\n");
-    
-    
+	
+	//get pseudo
+    fprintf(stdout, "Veuillez entrer votre pseudo : \n");
     if((lectureRet = read(0, buffer, BUFFER_SIZE)) == -1) {
 		perror("Erreur lors de la lecture au clavier...\n");
 		exit(2);
 	}
 
+	//prepare connection message
 	strtok(buffer, "\n");
 	strcpy(msg->contenu,buffer);
-
 	msg->code = CONNEXION;
-	
-	ecrire_msg(sck,msg);
 
-	msg = lire_msg(sck,msg);
-	if(msg->code == EN_ATTENTE){
-		printf("Attente de la début de partie\n");
-	}
+
+	envoyer_msg(sck,msg);
+
+	msg = recevoir_msg(sck,msg);
+	
+	handleMessage(msg->code);
+
+	
 
 	//ecoute message serveur
 	while(1){
-
+		
 	}
 
 }
 
-struct message* lire_msg(int sck,struct message *msg){
+struct message* recevoir_msg(int sck,struct message *msg){
 	int lectureRet;
 	if((lectureRet = read(sck,msg,sizeof(struct message))) == -1){
 		perror("erreur lecture client\n");
@@ -82,7 +79,8 @@ struct message* lire_msg(int sck,struct message *msg){
 	}
 	return msg;
 }
-void ecrire_msg(int sck, struct message *msg){
+
+void envoyer_msg(int sck, struct message *msg){
 	int ecritureRet;
 	if((ecritureRet = write(sck, msg, sizeof(struct message))) == -1) {
 			perror("Impossible d'ecrire un message au serveur...\n");
@@ -108,20 +106,43 @@ void get_socket(int *sck){
 		exit(1);
 	}
 }
-/*
-void get_host(struct hostent* ht, char* url){
+
+void get_host(struct hostent** ht, char* url){
 	printf("URL : %d \n",*url);
-	ht = gethostbyname(url);
+	struct hostent* h = gethostbyname(url); 
+	*ht = h;
 	if(ht == NULL){
 		fprintf(stderr, "Host inconnu");
 		exit(1);
 	}
 }
 
-void alloc_msg(struct message* msg){
-	if((msg = (struct message*) malloc(sizeof(struct message))) == NULL) {
+void alloc_msg(struct message** msg){
+	if((*msg = (struct message*) malloc(sizeof(struct message))) == NULL) {
 		perror("Erreur lors de l'allocation de memoire pour un message...\n");
 		exit(2);
 	}
 }
-*/
+
+void handleMessage(int messageCode){
+	switch (messageCode){
+		case EN_ATTENTE:
+			printf("Attente début de la partie.\n");
+			break;
+		case PARTIE_ANNULEE:
+			onPartieAnnulee();
+			break;
+		case DEBUT_PARTIE:
+			onDebutPartie();	
+		default:
+			break;
+	}
+}
+
+void onPartieAnnulee(){
+	
+}
+
+void onDebutPartie(){
+	
+}

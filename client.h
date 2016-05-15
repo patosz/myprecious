@@ -25,9 +25,12 @@
 
 void check_args(int*,char**);
 void get_socket(int*);
-//void get_host(struct hostent* host, char* url);
-//void alloc_msg(struct message* msg);
-struct message* lire_msg(int sck,struct message *msg);
-void ecrire_msg(int sck, struct message *msg);
+void get_host(struct hostent** host, char* url);
+void alloc_msg(struct message** msg);
+struct message* recevoir_msg(int sck,struct message *msg);
+void envoyer_msg(int sck, struct message *msg);
+void handleMessage(int messageCode);
+void onPartieAnnulee();
+void onDebutPartie();
 
 #endif

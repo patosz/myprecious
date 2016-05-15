@@ -23,6 +23,15 @@
 #define DECONNECTION 2
 #define PARTIE_ANNULEE 3
 #define DEBUT_PARTIE 4
+#define FIN_PARTIE 5
+#define JOUER_CARTE 6
+#define ENVOI_DECK 7
+#define AFFICHER_SCORE 8
+#define FIN_CARTES 9
+#define RENVOI_CARTE 10
+#define SCORE_MANCHE 11
+#define FIN_MANCHE 12
+
 #define TAILLECONTENU 256
 
 typedef struct message {

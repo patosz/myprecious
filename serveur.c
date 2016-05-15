@@ -8,6 +8,7 @@
 #define SYS(call) (((call)==-1)? perror(#call), exit(1) : 0)
 #define BUFFER_SIZE 512
 #define TIMEOUT_CONNECTION 30
+
 int main(int argc, char** argv){
     
 	int sck_srv;
