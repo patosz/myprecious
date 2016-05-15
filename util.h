@@ -18,11 +18,14 @@
 
 #define TIMEOUT_CONNECTION 30
 
+#define INSCRIPTION_TIME 10
+
 #define IDSHM 1234
 #define KEY_RC 4567
 #define SEM_READ 0
 #define SEM_WRITE 1
 
+#define MIN_JOUEUR 2
 #define MAX_JOUEUR 4
 
 #define PORT 8765
