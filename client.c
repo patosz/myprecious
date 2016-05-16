@@ -14,10 +14,10 @@ static int sck;
 static struct sockaddr_in addr;
 static struct hostent *host;
 static struct message *msg;
-static int nbCartesDeck = -1;
-static int nbCartesDefausse = -1;
-static int deck[52];
-static int defausse[52];
+static int nbCartesDeck = 0;
+static int nbCartesDefausse = 0;
+static int deck[NB_CARTES];
+static int defausse[NB_CARTES];
 static int partieInterrompue = FALSE;
 
 
@@ -185,7 +185,15 @@ void onFinPartie(){}
 
 void onJouerCarte(){}
 
-void onEnvoiDeck(char* contenu){}
+void onEnvoiDeck(char* contenu){
+	//premier strtok pour le nombre de cartes
+	//nbCartesDeck = strtok(contenu,",");
+	//remplir deck
+	//int i;
+	//for(i = 0; i < nbCartesDeck; i++){
+	//	deck[i] = strtok(NULL,",");
+	//}
+}
 
 void onRenvoiCarte(char* contenu){}
 

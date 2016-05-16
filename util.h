@@ -44,6 +44,8 @@
 #define SCORE_MANCHE 11
 #define FIN_MANCHE 12
 
+#define NB_CARTES 52
+
 #define TAILLECONTENU 256
 
 typedef struct message {
