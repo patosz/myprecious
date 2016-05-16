@@ -263,10 +263,10 @@ void onPlayerLeftInscription(int cl_socket){
 	int i, idx;
 	for(i = 0; i < MAX_JOUEUR; i++){
 		if(sockets[i] == cl_socket){
-			idx = i;
+			sockets[i] = -1;
+			break;
 		}
 	}
-	sockets[idx] = -1;
 	nbJoueurs --;	
 	close(cl_socket); // bye!
 	FD_CLR(cl_socket, &all_fds); // remove from all_fds set

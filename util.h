@@ -43,6 +43,7 @@
 
 #define TAILLECONTENU 256
 
+#define MAX_MANCHES 5
 
 
 typedef struct message {

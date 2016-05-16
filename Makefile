@@ -5,7 +5,7 @@
 #       HOFFMANN Xavier 
 ###########################################################
 CC=gcc
-CFLAGS=-g
+CFLAGS=-g -ansi
 
 all: client serveur
 
