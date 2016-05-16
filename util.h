@@ -20,11 +20,6 @@
 
 #define INSCRIPTION_TIME 5
 
-#define IDSHM 1234
-#define KEY_RC 4567
-#define SEM_READ 0
-#define SEM_WRITE 1
-
 #define MIN_JOUEUR 2
 #define MAX_JOUEUR 4
 
@@ -38,7 +33,7 @@
 #define FIN_PARTIE 5
 #define JOUER_CARTE 6
 #define ENVOI_DECK 7
-#define AFFICHER_SCORE 8
+#define AFFICHER_SCORE 
 #define FIN_CARTES 9
 #define RENVOI_CARTE 10
 #define SCORE_MANCHE 11
@@ -48,6 +43,8 @@
 
 #define TAILLECONTENU 256
 
+#include "carte.h"
+
 typedef struct message {
 	int code;
 	char contenu[TAILLECONTENU];
@@ -56,6 +53,7 @@ typedef struct message {
 typedef struct joueur {
 	char* pseudo;
 	int score;
+	int carte;
 } joueur;
 
 #endif

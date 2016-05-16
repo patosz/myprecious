@@ -25,6 +25,7 @@ int main(int argc, char** argv){
 	int ecritureRet;
 	int lectureRet;
 	char buffer[BUFFER_SIZE];
+	jeu *partie;
 	
 	//Creation d'un signal pour lors d'un ctrl c, on kill la shm
 	struct sigaction actionInt;
@@ -68,6 +69,7 @@ int main(int argc, char** argv){
 	while(TRUE){
 		//attendre le message du serveur
 		msg = recevoir_msg(msg);
+		
 		//traiter le message
 		handleMessage(msg);
 	}
@@ -143,6 +145,8 @@ void handleMessage(struct message* msg){
 		case RENVOI_CARTE:
 			onRenvoiCarte(msg->contenu);
 			break;
+
+		//Le plus simple va etre de calculer le score coté serveur et mettre a jour le score du joueur par le serveur
 		case SCORE_MANCHE:
 			onScoreManche();
 			break;
@@ -177,8 +181,8 @@ void onPartieAnnulee(){
 }
 
 void onDebutPartie(){
-	//attacher les mémoires
-	//attendre le message avec le deck
+	printf("Debut de la partie\n");
+	partie = lecteur_memoire();
 }
 
 void onFinPartie(){}
@@ -195,9 +199,13 @@ void onEnvoiDeck(char* contenu){
 	//}
 }
 
-void onRenvoiCarte(char* contenu){}
+void onRenvoiCarte(char* contenu){
 
-void onScoreManche(){}
+}
+
+void onScoreManche(){
+
+}
 
 void onFinManche(){}
 
@@ -211,4 +219,14 @@ void onExit(){
 	//detach shared memory
 	//exit
 	exit(1);
+}
+
+void lectureScores(){
+	//On recup la memoire
+	partie = lecteur_memoire();
+	printf("Voici la liste des scores actuels\n");
+	for(i = 0; i < MAX_JOUEUR; i++){
+		printf("Nom : %s       Score: %d\n", jeu->joueurs[i].pseudo,jeu->joueurs[i].score);
+	}
+
 }

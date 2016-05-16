@@ -16,8 +16,11 @@ static struct message *msg;
 static fd_set all_fds;
 
 int main(int argc, char** argv){
+
+	jeu *je;
     
 	//TODO ajouter un fichier de lock et vérifier son exitence pour ne pas lancer 2 fois le serveur
+	//xav: j'ai rajoute un exit dans le bind(). Car si bind renvoi -1 c'est que le port est deja utilise
 	
 	int sck_srv;
 	int sck_cl;
@@ -72,6 +75,7 @@ int main(int argc, char** argv){
 	//Bind socket
 	if(bind(sck_srv,(struct sockaddr *)&addr, sizeof(addr)) < 0){
 		perror("server - Probleme bind");
+		exit(1);
 	}
 
 	//Listen on socket
@@ -81,9 +85,7 @@ int main(int argc, char** argv){
 	
 	printf("Server en ecoute de connexions.\n");
 
-	//Init shm
-	//TODO à réparer car ne fonctionne pas
-	//create_shm(IDSHM);
+	
 	
 	//Malloc msg
 	if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
@@ -135,6 +137,7 @@ int main(int argc, char** argv){
 							strcpy(buffer, msg->contenu);
 							fprintf(stdout, "Un joueur s'est inscrit, voici son nom : %s\n", buffer);
 
+							
 							joueur j = (joueur) {.pseudo = buffer,.score = 0};
 							printf("Joueur crée : %s\n",j.pseudo);
 							
@@ -146,6 +149,13 @@ int main(int argc, char** argv){
 							joueurs[idx] = j;
 							sockets[idx] = sck_cl;
 							nbJoueurs++;
+
+							//malloc de jeu + creation de la memoire
+							if ((je = malloc(sizeof(jeu))) == NULL) {
+                            	perror("malloc () jeu : serveur");
+                       		}
+                       		init_memoire(1);
+                       		ecriture_mem_partie(je);
 							
 							FD_SET(sck_cl, &all_fds); // add to all_fds set
 							
@@ -192,7 +202,7 @@ int main(int argc, char** argv){
 		msg->code = PARTIE_ANNULEE;
 	}
 	for(i = 0; i < MAX_JOUEUR; i++){
-		int socket = sockets[i]; 
+		int socket = sockets[i];
 		if(socket != -1){
 			ecrire_msg(socket,msg);
 		}
@@ -205,9 +215,41 @@ int main(int argc, char** argv){
 	}
 	
 	//Debut partie
+	int nbJoueurAyantJouer=0;
 	while(1){
 		//ajouter logique partie
+		//On lis si il y a un message de la part d'un des joueurs
+		for(i = 0; i < MAX_JOUEUR; i++){
+			int socket = sockets[i];
+			if(socket != -1){
+				msg = lire_msg(socket,msg);
+			}
+			//Si le joueur n'a plus de cartes
+			if(msg->code == FIN_CARTES){
+				printf("Un joueur a perdu !\n");
+				msg->code = FIN_PARTIE;
+				for(i = 0; i < MAX_JOUEUR; i++){
+					int socket = sockets[i];
+					if(socket != -1){
+					ecrire_msg(socket,msg);
+					}
+				}
+			}
+			//Quand tout les joueurs ont joué
+			//On compare leurs cartes
+			if(nbJoueurAyantJouer == MAX_JOUEUR){
+				//Dans ce if, tout les joueurs on un num de carte dans joueurs[i].carte qu'il faut comparer pour voir le gagnant
+			}
+			//Si le joueur jour une carte
+			if(msg->code == JOUER_CARTE){
+				int numCarte = atoi(msg->contenu);
+				joueurs[i].carte = numCarte;
+				nbJoueurAyantJouer++;
+			}
 	}
+
+	// Pour recuperer la memoire partagee :    je = lecteur_memoire();
+	// Apres tu la modifies a souhait, ensuite tu la sauves ! ecriture_mem_partie(je);
 }
 
 void resetPartie(){

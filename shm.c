@@ -5,69 +5,104 @@
 #include "shm.h"
 
 
-/* Id de la shm */
+
+int mem;
+
+key_t key;
+key_t keyBD;
+key_t keyM;
+key_t keyC;
 int shmid;
+int shmidClient;
+jeu* partie;
+int * addr;
+int * vbool;
 
-/*nb de lecteurs de la shm */
-int nb_lecteurs;
 
 
-/* Creer la mémoire partagé et mets son id dans shmid */
-void create_shm(key_t key){
-    if ((shmid = shmget(key, sizeof(joueur[MAX_JOUEUR]),0644 | IPC_CREAT)) < 0){
-        perror("Erreur lors de la création de la mémoire partagée");
+
+void init_memoire(int serveur){
+
+    /*ftok = nous permet de créer clé*/
+    key = ftok("./",20000);
+    keyM = ftok("./",21000);
+    keyBD = ftok("./",22000);
+    keyC = ftok("./",23000);
+
+    if(serveur == 1){
+        /*shmget = allouer un segment de mémoire partagée */
+        SYS_NEG(shmid= shmget(key, sizeof(jeu),IPC_CREAT | 0666));
+
+        /*semget =  créer notre sémaphore */
+        SYS_NEG(mutex = semget(keyM,1,IPC_CREAT | 0660));
+
+        SYS_NEG(bd = semget(keyBD,1,IPC_CREAT | 0660));
+
+        /*semctl = permet d'init le semaphore à 1*/
+        SYS_NEG(semctl(mutex,0,SETVAL,1));
+
+        SYS_NEG(semctl(bd,0,SETVAL,1));
+
+    }else{
+        SYS_NEG(shmid= shmget(key, sizeof(jeu),0));
+
+        SYS_NEG(mutex = semget(keyM,1,0));
+
+        SYS_NEG(bd = semget(keyBD,1,0));
+
     }
-}
 
-/* The only argument, shmaddr, is the address you got from shmat(). The function returns -1 on error, 0 on success
-   Detache la shm apd de l'adresse
- */
-void detach_shm(void* shmaddr){
-    if(shmdt(shmaddr) < 0){
-        perror("Erreur au détachement de la memoire partagé");
+    SYS_NEG(shmidClient = shmget(keyC, sizeof(int),IPC_CREAT | 0666));
+
+    /*shmat = attache le segment de mémoire partagée identifié
+       par shmid au  segment  de  données  du  processus  appelant*/
+    addr = (int*)shmat(shmid,NULL,0);
+
+    if(*addr < 0){
+        perror("Erreur : shmat()\n");
     }
+
+    SYS_NULL(partie = shmat(shmid,NULL,0));
+
+
 }
 
-/* Supprime completement la shm */
-void delete_shm(){
-    if (shmctl(shmid,IPC_RMID,NULL)<0){
-        perror("Erreur lors de la destruction de la mémoire partagé");
-    }
+void fermeture_memoire(){
+
+    /*shmdt = permet à un processus de se détacher du segment.*/
+    SYS_NEG(shmdt(partie));
+
+    /*shmctl = permet d’intervenir sur ce segment (IPC_RMID = detruit)*/
+    SYS_NEG(shmctl(shmid, IPC_RMID,NULL));
+
+    SYS_NEG(shmdt(addr));
+
+    SYS_NEG(shmctl(shmidClient, IPC_RMID,NULL));
+
+    SYS_NEG(semctl(mutex,IPC_RMID,0));
+
+    SYS_NEG(semctl(bd,IPC_RMID,0));
+
 }
 
-int *attacher_shm(key_t key,int is_writer){
-    static long shmaddr;
-    if ((shmid = shmget(key, sizeof(joueur[MAX_JOUEUR]), 0)) < 0){
-        perror("Erreur lors de l'obtention de la memoire partagé");
-    }
-    if ((shmaddr = (long) shmat(shmid, 0, (is_writer ? 0 : SHM_RDONLY))) < 0){
-        perror("Erreur lors de l'attachement de la mémoire partagé");
-    }
-    return (int *) shmaddr;
+
+void ecriture_mem_partie(jeu* paramPart){
+    down(bd);
+    *partie = *paramPart;
+    up(bd);
 }
 
-
-/*  Shm qui s'occupe du nb de lecteur pour l'algo de Courtois */
-void create_shm_nb_lecteurs(key_t key) {
-    if ((nb_lecteurs = shmget(key, sizeof(int), IPC_CREAT | 0666)) < 0)
-        perror("Erreur a la creation de la memoire partagee pour l'algo de Courtois");
-}
-
-int* attach_to_shm_nb_lecteurs(key_t key) {
-    static long addresse_shm;
-
-    if ((nb_lecteurs = shmget(key, sizeof(int), 0)) < 0)
-        perror("Impossible de recup la memoire partagee, elle est surement pas creer");
-
-    if ((addresse_shm = (long) shmat(nb_lecteurs, 0, 0)) < 0)
-        perror("Erreur lors de l attachement de la mem partager pour l'algo de Courtois");
-
-    return (int *) addresse_shm;
-}
-
-void detach_from_shm_nb_lecteurs(void * shm) {
-    if (shmctl(nb_lecteurs, IPC_RMID, NULL) < 0)
-        perror("Erreur a la suppresion de la mem partagee (Courtois)");
-    if (shmdt(shm) < 0)
-        perror("Erreur lors de detachement de la meme partagee (Courtois)");
+jeu * lecteur_memoire(){
+    jeu * jeuARenvoyer;
+        down(mutex);
+        *addr = *addr +1;
+        if(*addr == 1) down(bd);
+        up(mutex);
+        jeuARenvoyer = partie;
+        down(mutex);
+        *addr = *addr-1;
+        if(*addr == 0)up(bd);
+        up(mutex);
+        return jeuARenvoyer;
+    return NULL;
 }

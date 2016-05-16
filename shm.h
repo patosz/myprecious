@@ -13,15 +13,19 @@
 #include <sys/shm.h>
 
 #include "util.h"
+#include "semaphore.h"
 
-void create_shm(key_t);
-void detach_shm(void*);
-void delete_shm();
-int* attacher_shm(key_t, int);
+typedef struct jeu{
+    joueur joueurs [MAX_JOUEUR];
+}jeu;
 
-void create_shm_nb_lecteurs(key_t);
-int* attach_to_shm_nb_lecteurs(key_t);
-void detach_from_shm_nb_lecteurs(void*);
+void init_memoire(int);
+int down(int);
+int up(int);
+void fermeture_memoire();
+void ecriture_mem_partie(jeu*);
+jeu * lecteur_memoire();
 
+void init_jeu(jeu * j,joueur * js,int);
 
 #endif

@@ -42,5 +42,6 @@ void onScoreManche();
 void onFinManche();
 void onConnectionLost();
 void onExit();
+void lectureScores();
 
 #endif

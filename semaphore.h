@@ -8,17 +8,18 @@
 #include <sys/sem.h>
 #include <sys/types.h>
 
-#include "shm.h"
-#include "util.h"
 
-void sem_init(key_t);
-void sem_up(int numSem);
-void sem_down(int numSem);
-int sem_destroy();
-void decrement_nb_lecteurs();
-void increment_nb_lecteurs();
-void sem_start_read();
-void sem_stop_read();
+
+#define SYS_NEG(call)(((call)==-1)?(perror(#call),exit(1)):0)
+#define SYS_NULL(call)(((call)==NULL)?(perror(#call),exit(1)):0)
+
+typedef int semaphore;
+
+semaphore mutex;
+semaphore bd;
+
+int down(int);
+int up(int);
 
 
 #endif
