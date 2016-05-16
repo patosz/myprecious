@@ -32,7 +32,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include "semaphore.h"
+
 #include "shm.h"
 #include "util.h"
 

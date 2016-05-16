@@ -13,7 +13,7 @@ serveur: serveur.o semaphore.o shm.o
 	$(CC) $(CFLAGS) -o serveur serveur.o semaphore.o shm.o
 
 client: client.o semaphore.o shm.o
-	$(CC) $(CFLAGS) -o client client.o semaphore.o shm.o
+	$(CC) $(CFLAGS) -o client client.o
 	
 client.o: client.c client.h util.h 
 	$(CC) $(CFLAG) -c client.c

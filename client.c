@@ -25,7 +25,6 @@ int main(int argc, char** argv){
 	int ecritureRet;
 	int lectureRet;
 	char buffer[BUFFER_SIZE];
-	jeu *partie;
 	
 	//Creation d'un signal pour lors d'un ctrl c, on kill la shm
 	struct sigaction actionInt;
@@ -182,6 +181,7 @@ void onPartieAnnulee(){
 
 void onDebutPartie(){
 	printf("Debut de la partie\n");
+		jeu *partie;
 	partie = lecteur_memoire();
 }
 
@@ -223,10 +223,12 @@ void onExit(){
 
 void lectureScores(){
 	//On recup la memoire
+		jeu *partie;
 	partie = lecteur_memoire();
 	printf("Voici la liste des scores actuels\n");
+	int i;
 	for(i = 0; i < MAX_JOUEUR; i++){
-		printf("Nom : %s       Score: %d\n", jeu->joueurs[i].pseudo,jeu->joueurs[i].score);
+		printf("Nom : %s       Score: %d\n", partie->joueurs[i].pseudo,partie->joueurs[i].score);
 	}
 
 }

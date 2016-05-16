@@ -22,6 +22,7 @@
 #include    <sys/types.h>
 
 #include "util.h"
+#include "shm.h"
 
 void check_args(int* argc, char** argv);
 void get_socket();

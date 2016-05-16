@@ -29,7 +29,6 @@ int main(int argc, char** argv){
 	struct sockaddr_in addr;
 	char buffer[BUFFER_SIZE];
 	struct sockaddr_in addr2;
-	key_t cleShm = IDSHM;
 	fd_set read_fds;
 	struct timeval tv;
 	
@@ -250,6 +249,7 @@ int main(int argc, char** argv){
 
 	// Pour recuperer la memoire partagee :    je = lecteur_memoire();
 	// Apres tu la modifies a souhait, ensuite tu la sauves ! ecriture_mem_partie(je);
+}
 }
 
 void resetPartie(){

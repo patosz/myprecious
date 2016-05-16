@@ -43,7 +43,7 @@
 
 #define TAILLECONTENU 256
 
-#include "carte.h"
+
 
 typedef struct message {
 	int code;
