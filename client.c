@@ -26,8 +26,16 @@ int main(int argc, char** argv){
 	int lectureRet;
 	char buffer[BUFFER_SIZE];
 	
-	signal(SIGPIPE,onConnectionLost);
-	signal(SIGINT,onExit);
+	//Creation d'un signal pour lors d'un ctrl c, on kill la shm
+	struct sigaction actionInt;
+	actionInt.sa_handler = onExit;
+	SYS(sigaction(SIGINT,&actionInt,0));
+	
+	//Creation d'un handler pour le timer
+	struct sigaction actionPipe;
+	actionPipe.sa_handler = onConnectionLost;
+	SYS(sigaction(SIGPIPE,&actionPipe,0));
+	
 
 	check_args(&argc, argv);
 	
