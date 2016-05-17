@@ -11,6 +11,9 @@
 
 #define CARTES_H
 
+#define NB_COULEURS 4
+#define NB_FIGURES 13
+
 #define DEUX_PI 0
 #define DEUX_TR 1
 #define DEUX_CA 2
@@ -76,9 +79,8 @@
 #define AS_CA 50
 #define AS_CO 51
 
-int points[] = {2,3,4,5,6,7,8,9,10,11,12,13,1};
-char* couleurs[] = {"pique","trèfle","carreau","coeur"};
-char* figures[] = {"deux","trois","quatre","cinq","six","sept","huit","neuf","dix","valet","dame","roi","as"};
-
+int getPoints(int card);
+char getCouleur(int card);
+char getFigure(int card);
 
 #endif

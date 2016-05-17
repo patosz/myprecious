@@ -80,6 +80,7 @@ int main(int argc, char** argv){
 	//Listen on socket
 	if(listen(sck_srv,MAX_JOUEUR)<0){
 		perror("Erreur lors de l'ecoute de demandes de connexion...\n");
+		exit(1);
 	}
 	
 	printf("Server en ecoute de connexions.\n");
