@@ -44,5 +44,7 @@ void onFinManche();
 void onConnectionLost();
 void onExit();
 void lectureScores();
+void victoire();
+
 
 #endif

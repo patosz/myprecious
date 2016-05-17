@@ -43,5 +43,6 @@ void onTimerEnd();
 void onPlayerLeftInscription(int cl_socket);
 int getFreePlace();
 void resetPartie();
+void shuffle(int *array, size_t n);
 
 #endif

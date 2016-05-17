@@ -38,6 +38,7 @@
 #define RENVOI_CARTE 10
 #define SCORE_MANCHE 11
 #define FIN_MANCHE 12
+#define VICTOIRE 13
 
 #define NB_CARTES 52
 

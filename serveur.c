@@ -215,13 +215,37 @@ int main(int argc, char** argv){
 	
 	//Debut partie
 	int nbJoueurAyantJouer=0;
+	//Creation du deck de carte
+	int deck[52];
+	int t;
+	for(t=0;t<52;t++){
+		deck[t]=t;
+	}
+	shuffle(deck,52);
+	//Si 2 joueurs
+	if(nbJoueurs == 2){
+		int deck1[26];
+		int deck2[26];
+		for(t=0;t<52/2;t++){
+			deck1[t]=deck[t];
+		}
+		int z;
+		for(z=0;z<52/2;z++){
+			deck2[z]=deck[t];
+			t++;
+		}
+		//On envoi le deck au 2 joueurs
+		
+
+	}
+
 	while(1){
 		//ajouter logique partie
+
 		//On lis si il y a un message de la part d'un des joueurs
-		for(i = 0; i < MAX_JOUEUR; i++){
-			int socket = sockets[i];
-			if(socket != -1){
-				msg = lire_msg(socket,msg);
+		for(i = 0; i < nbJoueurs; i++){
+			if (FD_ISSET(sockets[i], &read_fds)){
+				msg = lire_msg(sockets[i],msg);
 			}
 			//Si le joueur n'a plus de cartes
 			if(msg->code == FIN_CARTES){
@@ -233,6 +257,22 @@ int main(int argc, char** argv){
 					ecrire_msg(socket,msg);
 					}
 				}
+			}
+			//Si il y a une deconnexion
+			if(msg->code == DECONNEXION){
+				printf("le joueur %s a quitter la partie\n",joueurs[i].pseudo);
+				joueurs[i].score = -1;
+				nbJoueurs--;
+			}
+			//On verifie qu'il y ai toujours au moins 1 joueur
+			if(nbJoueurs == 1){
+				msg->code=VICTOIRE;
+				for(i = 0; i < MAX_JOUEUR; i++){
+					if(joueurs[i].score != -1){
+						ecrire_msg(sockets[i],msg);
+					}
+				}
+
 			}
 			//Quand tout les joueurs ont joué
 			//On compare leurs cartes
@@ -284,7 +324,7 @@ int getFreePlace(){
 
 struct message* lire_msg(int sck,struct message *msg){
 	int lectureRet;
-	if((lectureRet = read(sck,msg,sizeof(struct message))) == -1){
+	if((lectureRet = recv(sck,msg,sizeof(struct message),0)) == -1){
 		perror("erreur lecture client\n");
 		exit(1);
 	}
@@ -293,7 +333,7 @@ struct message* lire_msg(int sck,struct message *msg){
 
 void ecrire_msg(int sck, struct message *msg){
 	int ecritureRet;
-	if((ecritureRet = write(sck,msg,sizeof(struct message))) == -1){
+	if((ecritureRet = send(sck,msg,sizeof(struct message),0)) == -1){
 		perror("Erreur ecriture server\n");
 		exit(2);
 	}
@@ -301,6 +341,8 @@ void ecrire_msg(int sck, struct message *msg){
 
 void  INThandler(int sig){
 	signal(sig, SIG_IGN);
+	printf("fermeture memoire partager\n");
+	fermeture_memoire();
 	exit(2);
 }
 
@@ -311,3 +353,21 @@ void onTimerEnd(){
 	sigemptyset(&mask);
 	SYS(sigprocmask(SIG_SETMASK,&mask,NULL));
 }
+
+/* Arrange the N elements of ARRAY in random order.
+   Only effective if N is much smaller than RAND_MAX;
+   if this may not be the case, use a better random
+   number generator. */
+void shuffle(int *array, size_t n){
+    if (n > 1){
+        size_t i;
+        for (i = 0; i < n - 1; i++) 
+        {
+          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          int t = array[j];
+          array[j] = array[i];
+          array[i] = t;
+        }
+    }
+}
+

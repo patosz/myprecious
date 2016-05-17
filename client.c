@@ -64,19 +64,25 @@ int main(int argc, char** argv){
 
 	envoyer_msg(msg);
 
-	//joueur inscrit
-	while(TRUE){
-		//attendre le message du serveur
-		msg = recevoir_msg(msg);
-		
-		//traiter le message
-		handleMessage(msg);
+	fd_set rfds;
+	while(1){
+		FD_ZERO(&rfds);
+        FD_SET(sck, &rfds);
+
+        if(select(sck + 1, &rfds, NULL, NULL, NULL) < 0){
+        	perror("select()-client ");
+        }
+        if (FD_ISSET(sck, &rfds)){
+        	msg = recevoir_msg(msg);
+        	handleMessage(msg);
+        }
 	}
+
 }
 
 struct message* recevoir_msg(struct message *msg){
 	int lectureRet;
-	if((lectureRet = read(sck,msg,sizeof(struct message))) == -1){
+	if((lectureRet = recv(sck,msg,sizeof(struct message),0)) == -1){
 		perror("erreur lecture client\n");
 		exit(1);
 	}
@@ -85,7 +91,7 @@ struct message* recevoir_msg(struct message *msg){
 
 void envoyer_msg(struct message *msg){
 	int ecritureRet;
-	if((ecritureRet = write(sck, msg, sizeof(struct message))) == -1) {
+	if((ecritureRet = send(sck, msg, sizeof(struct message),0)) == -1) {
 		perror("Impossible d'ecrire un message au serveur...\n");
 		exit(1);
 	}
@@ -123,15 +129,19 @@ void malloc_msg(){
 
 void handleMessage(struct message* msg){
 	switch (msg->code){
+		//OK
 		case EN_ATTENTE:
 			printf("Attente début de la partie.\n");
 			break;
+		//OK
 		case PARTIE_ANNULEE:
 			onPartieAnnulee();
 			break;
+		//OK
 		case DEBUT_PARTIE:
 			onDebutPartie();
 			break;
+
 		case FIN_PARTIE:
 			onFinPartie();
 			break;
@@ -143,6 +153,9 @@ void handleMessage(struct message* msg){
 			break;
 		case RENVOI_CARTE:
 			onRenvoiCarte(msg->contenu);
+			break;
+		case VICTOIRE:
+			victoire();
 			break;
 
 		//Le plus simple va etre de calculer le score coté serveur et mettre a jour le score du joueur par le serveur
@@ -156,6 +169,10 @@ void handleMessage(struct message* msg){
 			printf("Message inconnu. \n");
 			break;
 	}
+}
+void victoire(){
+	printf("Vous avez gagné !\n");
+	exit(1);
 }
 
 void init_address(){
@@ -181,11 +198,11 @@ void onPartieAnnulee(){
 
 void onDebutPartie(){
 	printf("Debut de la partie\n");
-		jeu *partie;
-	partie = lecteur_memoire();
 }
 
-void onFinPartie(){}
+void onFinPartie(){
+
+}
 
 void onJouerCarte(){}
 
@@ -216,8 +233,9 @@ void onConnectionLost(){
 
 void onExit(){
 	printf("Le programme va quitter.\n");
-	//detach shared memory
-	//exit
+	msg->code=DECONNEXION;
+	envoyer_msg(msg);
+    close(sck);
 	exit(1);
 }
 
