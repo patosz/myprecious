@@ -30,12 +30,13 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-
+#include <setjmp.h>
 
 #include "shm.h"
 #include "util.h"
 
-void checkPlayerHaveCards();
+sigjmp_buf contexte_alarme;
+
 void jouerJeu();
 void jouerManche();
 void jouerTour();
@@ -56,5 +57,6 @@ int onEndPhaseInscription();
 void shuffle(int *array, size_t n);
 void refuserPlayer(int socket);
 int getPlayerIndex(int socket);
+void checkPlayerHaveCards();
 
 #endif
