@@ -218,7 +218,7 @@ int main(int argc, char** argv){
 		//ajouter logique partie
 		int mancheEnCours = TRUE;
 		//while(mancheEnCours){
-		if(mancheEnCours){
+		while(mancheEnCours){
 			//demander cartes
 			int i;
 			for(i = 0; i < MAX_JOUEUR; i++){
@@ -233,11 +233,12 @@ int main(int argc, char** argv){
 				read_fds = all_fds;
 				if (select(fdmax+1, &read_fds, NULL, NULL, &tv) == -1) {
 					perror("Erreur du select tour.");
-					exit(4);
+					raise(SIGINT);
 				}
 				for(i = 0; i < fdmax; i++){
 					if(FD_ISSET(i,&read_fds)){
 						if(i == sck_srv){
+							u_int len2 = sizeof(addr2);
 							if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
 								perror("Erreur lors de l'acceptation d'un participant...\n");
             					exit(1);
@@ -330,6 +331,7 @@ int main(int argc, char** argv){
 	// Pour recuperer la memoire partagee :    je = lecteur_memoire();
 	// Apres tu la modifies a souhait, ensuite tu la sauves ! ecriture_mem_partie(je);
 	}
+	//fin de la partie
 }
 
 int getPlayerIndex(int socket){
@@ -549,9 +551,3 @@ void shuffle(int *array, size_t n){
         }
     }
 }
-
-          array[i] = t;
-        }
-    }
-}
-
