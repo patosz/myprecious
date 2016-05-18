@@ -194,13 +194,12 @@ void jouerTour(){
 		cartes[i]=-1;
 	}
 
-	int attenteCartes = TRUE;
 	int sck_cl;
 	struct sockaddr_in addr2;
 	fd_set 	read_fds;
 	int nbJoueurAyantJouer = 0;
 	int finCartes = FALSE;
-	while(attenteCartes && nbJoueurAyantJouer < nbJoueurs){
+	while(nbJoueurAyantJouer != nbJoueurs){
 		read_fds = all_fds;
 		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("Erreur du select tour.");
@@ -237,11 +236,8 @@ void jouerTour(){
 								nbJoueurAyantJouer++;
 								cartes[idxP] = atoi(msg->contenu);
 							}
-							if(nbJoueurAyantJouer == nbJoueurs){
-								printf("tout les joueurs ont joué\n");
-								attenteCartes = FALSE;
-							}
 						} else if(msg->code == FIN_CARTES){
+							printf("pas de cartes\n");
 							finCartes = TRUE;
 						}
 					}
@@ -276,10 +272,80 @@ void jouerTour(){
 	send_msg(sockets[idxGagnant],msg);
 	printf("Le gagant du tour a recu les cartes\n");
 	
+	checkPlayerHaveCards();
+
+}
+
+void checkPlayerHaveCards(){
+	int i;
+	for(i = 0; i < MAX_JOUEUR; i++){
+		if(sockets[i] != -1){
+			msg->code = FIN_CARTES;
+			send_msg(sockets[i],msg);
+		}
+	}
+	
+	int cartes[MAX_JOUEUR];
+	for(i=0;i<MAX_JOUEUR;i++){
+		cartes[i]=-1;
+	}
+
+	int sck_cl;
+	struct sockaddr_in addr2;
+	fd_set 	read_fds;
+	int nbJoueurAyantJouer = 0;
+	int finCartes = FALSE;
+	while(nbJoueurAyantJouer != nbJoueurs){
+		read_fds = all_fds;
+		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("Erreur du select tour.");
+			raise(SIGINT);
+		}
+		for(i = 0; i < FD_SETSIZE; i++){
+			if(FD_ISSET(i,&read_fds)){
+				printf("socket : %d\n",i);
+				if(i == sck_srv){
+					u_int len2 = sizeof(addr2);
+					if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
+						perror("Erreur lors de l'acceptation d'un participant...\n");
+						exit(1);
+					}
+					printf("nouveau joueur mais partie en cours\n");
+					refuserPlayer(i);
+				} else {
+					int retVal;
+					if ((retVal = recv(i, msg, sizeof(struct message), 0)) <= 0) {
+						// got error or connection closed by client
+						if (retVal == 0) {
+							// connection closed
+							printf("selectserver: socket %d hung up\n", i);
+						} else {
+							perror("recv");
+						}
+						onPlayerLeft(i);
+					} else {
+						if(msg->code == JOUER_CARTE){
+							int idxP = getPlayerIndex(i);
+							if(cartes[idxP] == -1){
+								cartes[idxP] = 0;
+								nbJoueurAyantJouer++;
+							}
+						} else if(msg->code == FIN_CARTES){
+							int idxP = getPlayerIndex(i);
+							if(cartes[idxP] == -1){
+								cartes[idxP] = 0;
+								nbJoueurAyantJouer++;
+								finCartes = TRUE;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	if(finCartes){
 		mancheEnCours = FALSE;
 	}
-
 }
 
 void updateScoresShmem(){

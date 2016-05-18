@@ -48,6 +48,6 @@ void lectureScores();
 void victoire();
 void partieEnCours();
 void serveurDown();
-
+void onHasCartes();
 
 #endif

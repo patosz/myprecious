@@ -35,6 +35,7 @@
 #include "shm.h"
 #include "util.h"
 
+void checkPlayerHaveCards();
 void jouerJeu();
 void jouerManche();
 void jouerTour();

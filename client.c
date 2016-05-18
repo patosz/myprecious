@@ -182,9 +182,25 @@ void handleMessage(struct message* msg){
 		case SERVEUR_DOWN:
 			serveurDown();
 			break;
+		case FIN_CARTES:
+			onHasCartes();
+			break;		
 		default:
 			printf("Message inconnu. \n");
 			break;
+	}
+}
+
+void onHasCartes(){
+	//Si plus aucune carte
+	if(nbCartesDeck == 0 && nbCartesDefausse == 0){
+		msg->code = FIN_CARTES;
+		envoyer_msg(msg);
+		printf("Vous n'avez plus de cartes\n");
+	} else {
+		msg->code = JOUER_CARTE;
+		envoyer_msg(msg);
+		printf("Vous avez encore %d carte(s)\n",nbCartesDeck);
 	}
 }
 
@@ -268,15 +284,7 @@ void onJouerCarte(){
 	sprintf(msg->contenu,"%d",card);
 	envoyer_msg(msg);
 	
-	
-	//Si plus aucune carte
-	if(nbCartesDeck == 0 && nbCartesDefausse == 0){
-		msg->code = FIN_CARTES;
-		printf("Vous n'avez plus de carte\n");
-		envoyer_msg(msg);
-		return;
-	//Si encore de la carte dans la reserve
-	}else if( nbCartesDeck == 0){
+	if(nbCartesDeck == 0 && nbCartesDefausse > 0){
 		memcpy(deck,defausse,nbCartesDefausse);
 		nbCartesDeck = nbCartesDefausse;
 		nbCartesDefausse=0;
