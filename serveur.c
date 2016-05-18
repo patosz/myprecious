@@ -171,7 +171,10 @@ void jouerTour(){
 	}
 
 	int attenteCartes = TRUE;
+	int sck_cl;
+	struct sockaddr_in addr2;
 	fd_set 	read_fds;
+	int nbJoueurAyantJouer = 0;
 	while(attenteCartes){
 		read_fds = all_fds;
 		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
@@ -257,6 +260,7 @@ void updateScoresShmem(){
 	int sck_cl;
 	int i;
 	int nbJoueurAyantJouer = 0;
+	struct sockaddr_in addr2;
 	
 	while(attenteScores){
 		read_fds = all_fds;
