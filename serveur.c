@@ -118,10 +118,8 @@ int main(int argc, char** argv){
 			resetPartie();
 			continue;
 		} else {
-			distribuerCartes();
+			jouerJeu();
 		}
-		
-		jouerJeu();
 	}
 }
 
@@ -129,6 +127,7 @@ void jouerJeu(){
 	//Deroulement de la partie
 	while(nbManchesJouees < maxManches && nbJoueurs > 1){
 		mancheEnCours = TRUE;
+		distribuerCartes();
 		jouerManche();
 	}
 	
@@ -584,8 +583,9 @@ void resetPartie(){
 	
 	printf("réinitialisation de la mémoire partagée \n");
 	//reinit shmem
+	char* empty = "";
 	for(i = 0; i < MAX_JOUEUR; i++){
-		sprintf(je->joueurs[i].pseudo,"");
+		//sprintf(je->joueurs[i].pseudo,"%s", empty);
 		je->joueurs[i].score = 0;
 	}
 	ecriture_mem_partie(je);
@@ -643,7 +643,7 @@ void send_msg(int sck, struct message *msg){
 	}
 }
 
-void  INThandler(int sig){
+void INThandler(int sig){
 	printf("fermeture des sockets.\n");
 	int i;
 	for(i = 0; i < MAX_JOUEUR; i++){

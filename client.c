@@ -187,14 +187,17 @@ void handleMessage(struct message* msg){
 			break;
 	}
 }
+
 void serveurDown(){
 	printf("Le serveur s'est coupé.. Bye !\n");
 	raise(SIGINT);
 }
+
 void partieEnCours(){
 	printf("Une partie est en cours... Impossible de rejoindre\n");
 	raise(SIGINT);
 }
+
 void victoire(){
 	printf("Vous avez gagné !\n");
 	raise(SIGINT);
@@ -327,10 +330,11 @@ void onScoreManche(){
 	sprintf(msg->contenu,"%d",score);
 	envoyer_msg(msg);
 }
+
 //Fin de la manche, on envoi le score
 void onFinManche(){
 	printf("Un de joueurs n'a plus de cartes. Fin de la manche.\n");
-	onScoreManche();
+	//onScoreManche();
 }
 
 void onConnectionLost(){
