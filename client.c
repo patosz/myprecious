@@ -236,11 +236,17 @@ void onFinCartes(){
 
 void onJouerCarte(){
 	int i;
+	//Si plus aucune carte
 	if(nbCartesDeck == 0 && nbCartesDefausse == 0){
 		msg->code = FIN_CARTES;
 		printf("Vous n'avez plus de carte\n");
 		envoyer_msg(msg);
 		return;
+	//Si encore de la carte dans la reserve
+	}else if( nbCartesDeck == 0){
+		memcpy(deck,defausse,nbCartesDefausse);
+		nbCartesDeck = nbCartesDefausse;
+		nbCartesDefausse=0;
 	}
 	printf("Voici votre deck : \n");
 	
