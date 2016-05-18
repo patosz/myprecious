@@ -35,7 +35,7 @@
 #include "shm.h"
 #include "util.h"
 
-struct message* recv_msg(int sck,struct message *msg);
+void recv_msg(int sck);
 void send_msg(int sck, struct message *msg);
 void INThandler(int sig);
 void onTimerEnd();

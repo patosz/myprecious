@@ -135,7 +135,7 @@ int main(int argc, char** argv){
 							break;
 						}
 						
-						msg = recv_msg(sck_cl,msg);
+						recv_msg(sck_cl);
 						if(msg->code == CONNEXION){
 							strcpy(buffer, msg->contenu);
 							fprintf(stdout, "Un joueur s'est inscrit, voici son nom : %s\n", buffer);
@@ -181,7 +181,7 @@ int main(int argc, char** argv){
 						onPlayerLeft(i);
                     } else {
                         // we got some data from a client
-						msg = recv_msg(i,msg);
+						recv_msg(i);
 						
 						//TODO ajouter le traitement d'un message reçu mais normalement aucun message ne devrait être reçu
                     }
@@ -267,7 +267,7 @@ int main(int argc, char** argv){
 								onPlayerLeft(i);
 							} else {
 								
-								//msg = recv_msg(i,msg);
+								//recv_msg(i);
 								if(msg->code == FIN_MANCHE){
 									printf("Un joueur n'a plus de carte\n");
 									//Gerer le fait qu'un joueur n'a plus de cartes
@@ -362,7 +362,7 @@ int main(int argc, char** argv){
 								onPlayerLeft(i);
 							} else {
 								
-								//msg = recv_msg(i,msg);
+								//recv_msg(i);
 								if(msg->code == SCORE_MANCHE){
 									int idxP = getPlayerIndex(i);
 										printf("un joueur a envoyé son score: %d\n", atoi(msg->contenu));
@@ -388,7 +388,7 @@ int main(int argc, char** argv){
 		//On lis si il y a un message de la part d'un des joueurs
 		for(i = 0; i < nbJoueurs; i++){
 			if (FD_ISSET(sockets[i], &read_fds)){
-				msg = recv_msg(sockets[i],msg);
+				recv_msg(sockets[i]);
 			}
 			//Si le joueur n'a plus de cartes
 			if(msg->code == FIN_CARTES){
@@ -601,7 +601,7 @@ int getFreePlace(){
 	return -1;
 }
 
-struct message* recv_msg(int sck,struct message *msg){
+void recv_msg(int sck){
 	int lectureRet;
 	if((lectureRet = recv(sck,msg,sizeof(struct message),0)) == -1){
 		perror("erreur lecture client\n");
@@ -609,8 +609,6 @@ struct message* recv_msg(int sck,struct message *msg){
 	} else if(lectureRet == 0){
 		perror("client closed");
 		onPlayerLeft(sck);
-	} else {
-		return msg;
 	}
 }
 
