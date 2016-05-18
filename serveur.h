@@ -30,10 +30,12 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-
+#include <setjmp.h>
 
 #include "shm.h"
 #include "util.h"
+
+sigjmp_buf contexte_alarme;
 
 void jouerJeu();
 void jouerManche();

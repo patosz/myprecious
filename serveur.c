@@ -70,10 +70,12 @@ int main(int argc, char** argv){
 	SYS(sigaction(SIGINT,&actionInt,NULL));
 	
 	//Creation d'un handler pour le timer
+	/*
 	struct sigaction actionAlarm;
 	actionAlarm.sa_handler = onTimerEnd;
 	SYS(sigaction(SIGALRM,&actionAlarm,NULL));
-	
+	*/
+
 	//Init time	
 	srand(time(NULL));
 	
@@ -395,7 +397,10 @@ void onPhaseInscription(){
 							
 							
 							if(nbJoueurs == 0){
-								alarm(INSCRIPTION_TIME);
+								signal(SIGALRM, onTimerEnd);
+				                if (!sigsetjmp(contexte_alarme, 1)) {
+				                    alarm(INSCRIPTION_TIME);
+				                }
 							}
 														
 							int idx = getFreePlace();
@@ -666,9 +671,12 @@ void INThandler(int sig){
 void onTimerEnd(){
 	phaseInscription = FALSE;
 	printf("Le temps d'inscription est écoulé.\n");
+	/*
 	sigset_t mask;
 	sigemptyset(&mask);
 	SYS(sigprocmask(SIG_SETMASK,&mask,NULL));
+	*/
+	siglongjmp(contexte_alarme, 1);
 }
 
 /* Arrange the N elements of ARRAY in random order.
