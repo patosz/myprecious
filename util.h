@@ -40,12 +40,13 @@
 #define FIN_MANCHE 12
 #define VICTOIRE 13
 #define PARTIE_EN_COURS 14
+#define SERVEUR_DOWN 15
 
-#define NB_CARTES 52
+#define NB_CARTES 2
 
 #define TAILLECONTENU 256
 
-#define MAX_MANCHES 5
+#define MAX_MANCHES 3
 
 #define LOCK_FLE ".~myprecious"
 

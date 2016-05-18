@@ -46,6 +46,8 @@ void onConnectionLost();
 void onExit();
 void lectureScores();
 void victoire();
+void partieEnCours();
+void serveurDown();
 
 
 #endif

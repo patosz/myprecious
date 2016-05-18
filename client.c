@@ -67,19 +67,20 @@ int main(int argc, char** argv){
 	envoyer_msg(msg);
 
 	fd_set rfds;
+	FD_ZERO(&rfds);
+    FD_SET(sck, &rfds);
+    fd_set select_fds;
 	while(1){
-		int retSel;
-		FD_ZERO(&rfds);
-        FD_SET(sck, &rfds);
-
-        if((retSel = select(sck + 1, &rfds, NULL, NULL, NULL)) < 0){
+		int retSel;	
+		select_fds = rfds;	
+        if((retSel = select(FD_SETSIZE, &select_fds, NULL, NULL, NULL)) < 0){
         	perror("select()-client ");
         } else if(retSel == 0){
 			perror("serveur down.");
 			raise(SIGINT);
 		}
 		
-        if (FD_ISSET(sck, &rfds)){
+        if (FD_ISSET(sck, &select_fds)){
         	msg = recevoir_msg(msg);
         	handleMessage(msg);
         }
@@ -170,10 +171,24 @@ void handleMessage(struct message* msg){
 		case FIN_MANCHE:
 			onFinManche();
 			break;
+		case PARTIE_EN_COURS:
+			partieEnCours();
+			break;
+		case SERVEUR_DOWN:
+			serveurDown();
+			break;
 		default:
 			printf("Message inconnu. \n");
 			break;
 	}
+}
+void serveurDown(){
+	printf("Le serveur s'est coupé.. Bye !\n");
+	exit(1);
+}
+void partieEnCours(){
+	printf("Une partie est en cours... Impossible de rejoindre\n");
+	exit(1);
 }
 void victoire(){
 	printf("Vous avez gagné !\n");
@@ -215,8 +230,15 @@ void onFinCartes(){
 }
 
 void onJouerCarte(){
-	printf("Voici votre deck : \n");
 	int i;
+	if(nbCartesDeck == 0 && nbCartesDefausse == 0){
+		msg->code = FIN_CARTES;
+		printf("Vous n'avez plus de carte\n");
+		envoyer_msg(msg);
+
+	}
+	printf("Voici votre deck : \n");
+	
 	for(i = 0; i < tailleDeck; i++){
 		if(deck[i] != -1){
 			int card = deck[i];
@@ -240,6 +262,7 @@ void onJouerCarte(){
 	deck[choix] = -1;
 	nbCartesDeck--;
 	
+	printf("Carte envoyée: %d\n",card);
 	msg->code = JOUER_CARTE;
 	sprintf(msg->contenu,"%d",card);
 	envoyer_msg(msg);
@@ -247,7 +270,7 @@ void onJouerCarte(){
 
 void onEnvoiDeck(char* contenu){
 	printf("Cartes reçues. \n");
-	printf("DEBUG : Cotenu msg deck : %s\n",contenu);
+	//printf("DEBUG : Cotenu msg deck : %s\n",contenu);
 	//premier strtok pour le nombre de cartes
 	nbCartesDeck = tailleDeck = atoi(strtok(contenu,","));
 	
@@ -287,10 +310,12 @@ void onScoreManche(){
 	
 	msg->code = SCORE_MANCHE;
 	sprintf(msg->contenu,"%d",score);
+	envoyer_msg(msg);
 }
-
+//Fin de la manche, on envoi le score
 void onFinManche(){
 	printf("Un de joueurs n'a plus de cartes. Fin de la manche.\n");
+	onScoreManche();
 }
 
 void onConnectionLost(){
