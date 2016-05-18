@@ -165,9 +165,10 @@ void jouerJeu(){
 }
 
 void jouerManche(){
-	while(mancheEnCours){
+	while(nbJoueurs > 1 && mancheEnCours){
 		jouerTour();
 	}
+	printf("fin manche\n");
 	nbManchesJouees++;
 	//demander les scores pour la manche
 	int i;
@@ -178,6 +179,7 @@ void jouerManche(){
 		}
 	}
 	updateScoresShmem();
+	printf("scores mis à jour \n");
 }
 
 void jouerTour(){
@@ -201,7 +203,7 @@ void jouerTour(){
 	fd_set 	read_fds;
 	int nbJoueurAyantJouer = 0;
 	int finCartes = FALSE;
-	while(nbJoueurAyantJouer != nbJoueurs){
+	while(nbJoueurs > 1 && nbJoueurAyantJouer < nbJoueurs){
 		read_fds = all_fds;
 		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("Erreur du select tour.");
@@ -297,7 +299,7 @@ void checkPlayerHaveCards(){
 	fd_set 	read_fds;
 	int nbJoueurAyantJouer = 0;
 	int finCartes = FALSE;
-	while(nbJoueurAyantJouer != nbJoueurs){
+	while(nbJoueurs > 1 && nbJoueurAyantJouer < nbJoueurs){
 		read_fds = all_fds;
 		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("Erreur du select tour.");
@@ -305,7 +307,7 @@ void checkPlayerHaveCards(){
 		}
 		for(i = 0; i < FD_SETSIZE; i++){
 			if(FD_ISSET(i,&read_fds)){
-				printf("socket : %d\n",i);
+				printf("check havecards : socket : %d\n",i);
 				if(i == sck_srv){
 					u_int len2 = sizeof(addr2);
 					if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
@@ -327,12 +329,14 @@ void checkPlayerHaveCards(){
 						onPlayerLeft(i);
 					} else {
 						if(msg->code == JOUER_CARTE){
+							printf("check havecards : socket : %d : a encore des cartes\n",i);
 							int idxP = getPlayerIndex(i);
 							if(cartes[idxP] == -1){
 								cartes[idxP] = 0;
 								nbJoueurAyantJouer++;
 							}
 						} else if(msg->code == FIN_CARTES){
+							printf("check havecards : socket : %d : n'a plus de cartes\n",i);
 							int idxP = getPlayerIndex(i);
 							if(cartes[idxP] == -1){
 								cartes[idxP] = 0;
@@ -571,6 +575,7 @@ void distribuerCartes(){
 			for(;lastPlayer < MAX_JOUEUR;lastPlayer++){
 				if(sockets[lastPlayer] != -1){
 					sendDeck(sockets[lastPlayer],deckP, nbCardsPlayer);
+					lastPlayer++;
 					break;
 				}
 			}
@@ -735,6 +740,7 @@ void INThandler(int sig){
 }
 
 void onTimerEnd(){
+	signal(SIGALRM, onTimerEnd);
 	phaseInscription = FALSE;
 	printf("Le temps d'inscription est écoulé.\n");
 	/*
@@ -742,7 +748,7 @@ void onTimerEnd(){
 	sigemptyset(&mask);
 	SYS(sigprocmask(SIG_SETMASK,&mask,NULL));
 	*/
-	siglongjmp(contexte_alarme, 1);
+	//siglongjmp(contexte_alarme, 1);
 }
 
 /* Arrange the N elements of ARRAY in random order.
