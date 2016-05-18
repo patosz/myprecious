@@ -223,6 +223,7 @@ int main(int argc, char** argv){
 		while(mancheEnCours){
 			//demander cartes
 			int i;
+			printf("jenvoi une demande\n");
 			for(i = 0; i < MAX_JOUEUR; i++){
 				if(sockets[i] != -1){
 					msg->code = JOUER_CARTE;
@@ -240,7 +241,6 @@ int main(int argc, char** argv){
 					perror("Erreur du select tour.");
 					raise(SIGINT);
 				}
-				
 				for(i = 0; i < FD_SETSIZE; i++){
 					if(FD_ISSET(i,&read_fds)){
 						printf("socket : %d\n",i);
@@ -266,12 +266,6 @@ int main(int argc, char** argv){
 								}
 								onPlayerLeft(i);
 							} else {
-								
-								//recv_msg(i);
-								if(msg->code == FIN_MANCHE){
-									printf("Un joueur n'a plus de carte\n");
-									//Gerer le fait qu'un joueur n'a plus de cartes
-								}
 								if(msg->code == JOUER_CARTE){
 									int idxP = getPlayerIndex(i);
 									if(cartes[idxP] == -1){
@@ -297,7 +291,7 @@ int main(int argc, char** argv){
 			int idxGagnant=-1;
 			int idx;
 			for(i=0;i<MAX_JOUEUR;i++){
-				idx = getPlayerIndex(sockets[i]);
+				idx = sockets[i];
 				if(cartes[i] > max){
 					idxGagnant= idx;
 					max = cartes[i];
@@ -312,10 +306,11 @@ int main(int argc, char** argv){
 					sprintf(buffCartes,"%s,%d",buffCartes,cartes[i]);
 				}
 			}
+			//CECI NE FONCTIONNE PAS IdxGagnant est à -1. Je trouve vraiment pas comment faire
 			msg->code=RENVOI_CARTE;
 			sprintf(msg->contenu,"%s",buffCartes);
-			printf("%d\n", idxGagnant);
-			send_msg(sockets[idxGagnant],msg);
+			printf("index du gagnant %d\n", idxGagnant);
+			send_msg(idxGagnant,msg);
 			printf("Le gagant a recu son deck\n");
 
 		}
@@ -367,8 +362,11 @@ int main(int argc, char** argv){
 									int idxP = getPlayerIndex(i);
 										printf("un joueur a envoyé son score: %d\n", atoi(msg->contenu));
 										nbJoueurAyantJouer++;
+										printf("ici\n");
 										je =  lecteur_memoire();
+										printf("ou ici\n");
 										je->joueurs[idxP].score += atoi(msg->contenu);
+										printf("coucou\n");
 										ecriture_mem_partie(je);									
 									if(nbJoueurAyantJouer == nbJoueurs){
 										printf("tout les joueurs ont donné leurs scores\n");

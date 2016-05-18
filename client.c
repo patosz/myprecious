@@ -240,7 +240,7 @@ void onJouerCarte(){
 		msg->code = FIN_CARTES;
 		printf("Vous n'avez plus de carte\n");
 		envoyer_msg(msg);
-
+		return;
 	}
 	printf("Voici votre deck : \n");
 	
