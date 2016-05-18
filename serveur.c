@@ -616,7 +616,10 @@ void send_msg(int sck, struct message *msg){
 	int ecritureRet;
 	if((ecritureRet = send(sck,msg,sizeof(struct message),0)) == -1){
 		perror("Erreur ecriture server\n");
-		exit(2);
+		onPlayerLeft(sck);
+	} else if(ecritureRet == 0){
+		perror("client disconnected \n");
+		onPlayerLeft(sck);
 	}
 }
 

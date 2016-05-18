@@ -31,7 +31,7 @@ void get_host(char* url);
 void malloc_msg();
 void init_address();
 void connect_to_server();
-struct message* recevoir_msg(struct message *msg);
+void recevoir_msg();
 void envoyer_msg(struct message *msg);
 void handleMessage(struct message *msg);
 void onPartieAnnulee();

@@ -81,27 +81,32 @@ int main(int argc, char** argv){
 		}
 		
         if (FD_ISSET(sck, &select_fds)){
-        	msg = recevoir_msg(msg);
+        	recevoir_msg();
         	handleMessage(msg);
         }
 	}
 
 }
 
-struct message* recevoir_msg(struct message *msg){
+void recevoir_msg(){
 	int lectureRet;
 	if((lectureRet = recv(sck,msg,sizeof(struct message),0)) == -1){
 		perror("erreur lecture client\n");
-		exit(1);
+		raise(SIGINT);
+	} else if (lectureRet == 0){
+		perror("server disconnected \n");
+		raise(SIGINT);
 	}
-	return msg;
 }
 
 void envoyer_msg(struct message *msg){
 	int ecritureRet;
 	if((ecritureRet = send(sck, msg, sizeof(struct message),0)) == -1) {
 		perror("Impossible d'ecrire un message au serveur...\n");
-		exit(1);
+		raise(SIGINT);
+	} else if (ecritureRet == 0){
+		perror("server disconnected \n");
+		raise(SIGINT);
 	}
 }
 
@@ -184,15 +189,15 @@ void handleMessage(struct message* msg){
 }
 void serveurDown(){
 	printf("Le serveur s'est coupé.. Bye !\n");
-	exit(1);
+	raise(SIGINT);
 }
 void partieEnCours(){
 	printf("Une partie est en cours... Impossible de rejoindre\n");
-	exit(1);
+	raise(SIGINT);
 }
 void victoire(){
 	printf("Vous avez gagné !\n");
-	exit(1);
+	raise(SIGINT);
 }
 
 void init_address(){
@@ -213,7 +218,7 @@ void connect_to_server(){
 void onPartieAnnulee(){
 	printf("Partie annulée car nombre de joueurs insuffisant.\n");
 	printf("Le programme va quitter.\n");
-	exit(1);
+	raise(SIGINT);
 }
 
 void onDebutPartie(){
