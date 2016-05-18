@@ -48,5 +48,7 @@ void sendDeck(int socket, int* deck, int nbCartes);
 void checkLockFile();
 int onEndPhaseInscription();
 void shuffle(int *array, size_t n);
+void refuserPlayer(int socket);
+int getPlayerIndex(int socket);
 
 #endif

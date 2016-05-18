@@ -217,7 +217,8 @@ int main(int argc, char** argv){
 	while(nbManchesJouees < MAX_MANCHES && nbJoueurs > 1){
 		//ajouter logique partie
 		int mancheEnCours = TRUE;
-		while(mancheEnCours){
+		//while(mancheEnCours){
+		if(mancheEnCours){
 			//demander cartes
 			int i;
 			for(i = 0; i < MAX_JOUEUR; i++){
@@ -226,9 +227,54 @@ int main(int argc, char** argv){
 					send_msg(sockets[i],msg);
 				}
 			}
+			int attenteCartes = TRUE;
+			int cartes[nbJoueurs];
+			while(attenteCartes){
+				read_fds = all_fds;
+				if (select(fdmax+1, &read_fds, NULL, NULL, &tv) == -1) {
+					perror("Erreur du select tour.");
+					exit(4);
+				}
+				for(i = 0; i < fdmax; i++){
+					if(FD_ISSET(i,&read_fds)){
+						if(i == sck_srv){
+							if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
+								perror("Erreur lors de l'acceptation d'un participant...\n");
+            					exit(1);
+							}
+							refuserPlayer(i);
+						} else {
+							int retVal;
+		                    if ((retVal = recv(i, msg, sizeof(struct message), 0)) <= 0) {
+        		                // got error or connection closed by client
+		                        if (retVal == 0) {
+        	                    	// connection closed
+            	                	printf("selectserver: socket %d hung up\n", i);
+								} else {
+									perror("recv");
+								}
+								onPlayerLeft(i);
+							} else {
+								if(msg->code == JOUER_CARTE){
+									int idxP = getPlayerIndex(i);
+									if(cartes[idxP] == -1){
+										nbJoueurAyantJouer++;
+										cartes[idxP] = atoi(msg->contenu);
+									}
+									if(nbJoueurAyantJouer == nbJoueurs){
+										attenteCartes = FALSE;
+									}
+								} else if(msg->code == FIN_CARTES){
+									attenteCartes = FALSE;
+									mancheEnCours = FALSE;
+								}
+							}
+						}
+					}
+				}
+			}
 			//définir gagnant
 			//renvoyer cartes
-			//si je reçois pas de cartes, mancheEnCours false
 		}
 		//demander les scores pour la manche
 		//update scores
@@ -286,9 +332,20 @@ int main(int argc, char** argv){
 	}
 }
 
+int getPlayerIndex(int socket){
+	int i;
+	for(i = 0; i < nbJoueurs; i++){
+		if(sockets[i] == socket){
+			return i;
+		}
+	}
+	return -1;
+}
+
 void refuserPlayer(int socket){
 	msg->code = PARTIE_EN_COURS;
 	send_msg(socket,msg);
+	close(socket);
 }
 
 void checkLockFile(){
@@ -442,9 +499,13 @@ struct message* recv_msg(int sck,struct message *msg){
 	int lectureRet;
 	if((lectureRet = recv(sck,msg,sizeof(struct message),0)) == -1){
 		perror("erreur lecture client\n");
-		exit(1);
+		onPlayerLeft(sck);
+	} else if(lectureRet == 0){
+		perror("client closed");
+		onPlayerLeft(sck);
+	} else {
+		return msg;
 	}
-	return msg;
 }
 
 void send_msg(int sck, struct message *msg){
@@ -457,8 +518,8 @@ void send_msg(int sck, struct message *msg){
 
 void  INThandler(int sig){
 	signal(sig, SIG_IGN);
-	printf("fermeture memoire partagee.\n");
-	fermeture_memoire();
+	//printf("fermeture memoire partagee.\n");
+	//fermeture_memoire();
 	printf("suppression fichier lock.\n");
 	remove(LOCK_FLE);
 	exit(2);
@@ -484,6 +545,11 @@ void shuffle(int *array, size_t n){
           size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
           int t = array[j];
           array[j] = array[i];
+          array[i] = t;
+        }
+    }
+}
+
           array[i] = t;
         }
     }

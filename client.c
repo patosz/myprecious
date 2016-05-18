@@ -16,6 +16,7 @@ static struct hostent *host;
 static struct message *msg;
 static int nbCartesDeck = 0;
 static int nbCartesDefausse = 0;
+static int tailleDeck = 0;
 static int deck[NB_CARTES];
 static int defausse[NB_CARTES];
 static int partieInterrompue = FALSE;
@@ -147,7 +148,6 @@ void handleMessage(struct message* msg){
 		case DEBUT_PARTIE:
 			onDebutPartie();
 			break;
-
 		case FIN_PARTIE:
 			onFinPartie();
 			break;
@@ -163,7 +163,6 @@ void handleMessage(struct message* msg){
 		case VICTOIRE:
 			victoire();
 			break;
-
 		//Le plus simple va etre de calculer le score coté serveur et mettre a jour le score du joueur par le serveur
 		case SCORE_MANCHE:
 			onScoreManche();
@@ -203,11 +202,11 @@ void onPartieAnnulee(){
 }
 
 void onDebutPartie(){
-	printf("Debut de la partie\n");
+	printf("Debut de la partie.\n");
 }
 
 void onFinPartie(){
-	
+	printf("Fin de la partie.\n");
 }
 
 void onFinCartes(){
@@ -218,22 +217,25 @@ void onFinCartes(){
 void onJouerCarte(){
 	printf("Voici votre deck : \n");
 	int i;
-	for(i = 0; i < NB_CARTES; i++){
+	for(i = 0; i < tailleDeck; i++){
 		if(deck[i] != -1){
 			int card = deck[i];
-			printf("%d : %c%c \n",i,getFigure(card),getCouleur(card));
+			char fig = getFigure(card);
+			char coul = getCouleur(card);
+			printf("%d : %c%c \n",i,fig,coul);
 		}
 	}
 	int choix = -1;
 	char buff[256];
+	int choixValide = FALSE;
 	do{
 		printf("Quelle carte voulez-vous jouer ?");
-		if(fgets(buff,256*sizeof(char),stdin) != NULL && (choix = atoi(buff)) > 0 && choix < NB_CARTES && deck[choix] != -1){
-			break;
+		if(fgets(buff,256*sizeof(char),stdin) != NULL && (choix = atoi(buff)) >= 0 && choix < tailleDeck && deck[choix] != -1){
+			choixValide = TRUE;
 		} else {
 			printf("Choix invalide.\n");
 		}
-	}while(1);
+	}while(!choixValide);
 	int card = deck[choix];
 	deck[choix] = -1;
 	nbCartesDeck--;
@@ -241,31 +243,55 @@ void onJouerCarte(){
 	msg->code = JOUER_CARTE;
 	sprintf(msg->contenu,"%d",card);
 	envoyer_msg(msg);
-
 }
 
 void onEnvoiDeck(char* contenu){
 	printf("Cartes reçues. \n");
+	printf("DEBUG : Cotenu msg deck : %s\n",contenu);
 	//premier strtok pour le nombre de cartes
-	nbCartesDeck = atoi(strtok(contenu,","));
+	nbCartesDeck = tailleDeck = atoi(strtok(contenu,","));
 	
 	//remplir deck
 	int i;
 	for(i = 0; i < nbCartesDeck;i++){
 		deck[i] = atoi(strtok(NULL,","));
 	}
-	printf("Vous avez une main de %d cartes.\n",nbCartesDeck);
+	printf("Vous avez une main de %d cartes.\n",tailleDeck);
+	printf("Il vous reste %d cartes.\n",nbCartesDeck);
 }
 
 void onRenvoiCarte(char* contenu){
+	int nbCartes = atoi(strtok(contenu,","));
+	int i;
+	for(i = 0; i < nbCartes; i++){
+		defausse[nbCartesDefausse+i] = atoi(strtok(NULL,","));
+	}
+	nbCartesDefausse += nbCartes;
 	printf("Vous remportez le tour.\n");
 }
 
 void onScoreManche(){
-
+	int score = 0;
+	int i;
+	//points main
+	for(i = 0; i < tailleDeck; i++){
+		if(deck[i] != -1){
+			score += getPoints(deck[i]);
+		}
+	}
+	//points defausse
+	for(i = 0; i < nbCartesDefausse; i++){
+		score += getPoints(defausse[i]);
+	}
+	printf("Votre sore pour cette manche : %d\n",score);
+	
+	msg->code = SCORE_MANCHE;
+	sprintf(msg->contenu,"%d",score);
 }
 
-void onFinManche(){}
+void onFinManche(){
+	printf("Un de joueurs n'a plus de cartes. Fin de la manche.\n");
+}
 
 void onConnectionLost(){
 	perror("Connexion au serveur perdue ! \n");

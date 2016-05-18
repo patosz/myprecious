@@ -11,6 +11,8 @@
 
 #define CARTES_H
 
+#include <stdio.h>
+
 #define NB_COULEURS 4
 #define NB_FIGURES 13
 
