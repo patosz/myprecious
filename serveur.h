@@ -35,6 +35,11 @@
 #include "shm.h"
 #include "util.h"
 
+void jouerJeu();
+void jouerManche();
+void jouerTour();
+void updateScoresShmem();
+void onPhaseInscription();
 void recv_msg(int sck);
 void send_msg(int sck, struct message *msg);
 void INThandler(int sig);
@@ -43,7 +48,7 @@ void onPlayerLeft(int cl_socket);
 int getFreePlace();
 void resetPartie();
 void shuffle(int *array, size_t n);
-void onDebutPartie();
+void distribuerCartes();
 void sendDeck(int socket, int* deck, int nbCartes);
 void checkLockFile();
 int onEndPhaseInscription();

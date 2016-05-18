@@ -15,21 +15,48 @@ static int sockets[MAX_JOUEUR];
 static struct message *msg;
 static fd_set all_fds;
 static int sck_srv;
-	
+static int mancheEnCours = TRUE;
+static int nbManchesJouees = 0;
+static jeu *je;
+static int maxManches = MAX_MANCHES;
+
 int main(int argc, char** argv){
-
+	
+	//Check if nor already running !!
 	checkLockFile();
-
-	jeu *je;
+	
+	if(argc == 2){
+		int manchesDemandees = atoi(argv[1]);
+		if(manchesDemandees <= 0){
+			printf("Manches demandées négative ou nulles. La valeur par défaut est prise.\n");
+		} else if(manchesDemandees > maxManches){
+			printf("Manches demandées supérieures à la valeur maximale autorisée. La valeur par défaut est prise.\n");
+		} else {
+			maxManches = manchesDemandees;
+		}
+	}
 	
 	int sck_cl;
-    int nbrefds;
-	int fdmax;
-	struct sockaddr_in addr;
-	char buffer[BUFFER_SIZE];
+	struct sockaddr_in addr_srv;
 	struct sockaddr_in addr2;
 	fd_set read_fds;
-	struct timeval tv;
+	
+	
+	//Malloc joueur joueurs[MAX_JOUEUR]
+	joueurs =(joueur*) malloc (MAX_JOUEUR* sizeof (joueur));
+
+	//Malloc msg
+	if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
+		perror("Erreur lors de l'allocation de memoire pour un message...\n");
+		exit(2);
+	}
+	
+	//malloc de jeu + creation de la memoire
+	if ((je = malloc(sizeof(jeu))) == NULL) {
+		perror("malloc () jeu : serveur");
+	}
+	init_memoire(1);
+	ecriture_mem_partie(je);
 	
 	//Init sockets with -1 to track free places
 	int i;
@@ -50,14 +77,6 @@ int main(int argc, char** argv){
 	//Init time	
 	srand(time(NULL));
 	
-	//Empty main fd set
-    FD_ZERO(&all_fds);
-	
-	
-	//Init timeval
-	tv.tv_sec = 0; //TIMEOUT_CONNECTION;
-    tv.tv_usec = 500000;
-
     //Get socket
 	if( (sck_srv = socket(AF_INET,SOCK_STREAM,0)) < 0 ){
 	    perror("server - Probleme socket");
@@ -65,13 +84,13 @@ int main(int argc, char** argv){
     }
 
 	//Init address
-    bzero((char*)&addr,sizeof(struct sockaddr_in));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(PORT);
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	memset((char*)&addr_srv, 0, sizeof(struct sockaddr_in));
+	addr_srv.sin_family = AF_INET;
+	addr_srv.sin_port = htons(PORT);
+	addr_srv.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	//Bind socket
-	if(bind(sck_srv,(struct sockaddr *)&addr, sizeof(addr)) < 0){
+	if(bind(sck_srv,(struct sockaddr *)&addr_srv, sizeof(addr_srv)) < 0){
 		perror("server - Probleme bind");
 		exit(1);
 	}
@@ -84,49 +103,248 @@ int main(int argc, char** argv){
 	
 	printf("Server en ecoute de connexions.\n");
 
-	//Malloc joueur joueurs[MAX_JOUEUR]
-	joueurs =(joueur*) malloc (MAX_JOUEUR* sizeof (joueur));
-	//Malloc msg
-	if((msg = (struct message*)malloc(sizeof(struct message))) == NULL) {
-		perror("Erreur lors de l'allocation de memoire pour un message...\n");
-		exit(2);
-	}
-	
+	//Empty main fd set
+    FD_ZERO(&all_fds);
 	//Add server socket to set
 	FD_SET(sck_srv, &all_fds);
+		
+	//Boucle principale serveur
+	while(1){
+		onPhaseInscription();
+		
+		int annulee = onEndPhaseInscription();
+		
+		if(annulee == -1){
+			resetPartie();
+			continue;
+		} else {
+			distribuerCartes();
+		}
+		
+		jouerJeu();
+	}
+}
+
+void jouerJeu(){
+	//Deroulement de la partie
+	int nbJoueursRestants = nbJoueurs;
+	int nbJoueurAyantJouer = 0;
+	while(nbManchesJouees < maxManches && nbJoueurs > 1){
+		jouerManche();
+	}
+	//TODO déterminer gagnant
+	//TODO envoyer victoire au gagnant
+	//TODO envoyer fin de partie à ttlm
+	//TODO reset partie
+}
+
+void jouerManche(){
+	while(mancheEnCours){
+		jouerTour();
+	}
+	nbManchesJouees++;
+	//demander les scores pour la manche
+	int i;
+	for(i = 0; i < MAX_JOUEUR; i++){
+		if(sockets[i] != -1){
+			msg->code = FIN_MANCHE;
+			send_msg(sockets[i],msg);
+		}
+	}
+	updateScoresShmem();
+}
+
+void jouerTour(){
+	//demander cartes
+	int i;
+	printf("jenvoi une demande\n");
+	for(i = 0; i < MAX_JOUEUR; i++){
+		if(sockets[i] != -1){
+			msg->code = JOUER_CARTE;
+			send_msg(sockets[i],msg);
+		}
+	}
+
+	int cartes[MAX_JOUEUR];
+	for(i=0;i<MAX_JOUEUR;i++){
+		cartes[i]=-1;
+	}
+
+	int attenteCartes = TRUE;
+	fd_set 	read_fds;
+	while(attenteCartes){
+		read_fds = all_fds;
+		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("Erreur du select tour.");
+			raise(SIGINT);
+		}
+		for(i = 0; i < FD_SETSIZE; i++){
+			if(FD_ISSET(i,&read_fds)){
+				printf("socket : %d\n",i);
+				if(i == sck_srv){
+					u_int len2 = sizeof(addr2);
+					if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
+						perror("Erreur lors de l'acceptation d'un participant...\n");
+						exit(1);
+					}
+					printf("nouveau joueur mais partie en cours\n");
+					refuserPlayer(i);
+				} else {
+					int retVal;
+					
+					if ((retVal = recv(i, msg, sizeof(struct message), 0)) <= 0) {
+						// got error or connection closed by client
+						if (retVal == 0) {
+							// connection closed
+							printf("selectserver: socket %d hung up\n", i);
+						} else {
+							perror("recv");
+						}
+						onPlayerLeft(i);
+					} else {
+						if(msg->code == JOUER_CARTE){
+							int idxP = getPlayerIndex(i);
+							if(cartes[idxP] == -1){
+								printf("un joueur a jouer la carte: %d\n", atoi(msg->contenu));
+								nbJoueurAyantJouer++;
+								cartes[idxP] = atoi(msg->contenu);
+							}
+							if(nbJoueurAyantJouer == nbJoueurs){
+								printf("tout les joueurs ont joué\n");
+								attenteCartes = FALSE;
+							}
+						} else if(msg->code == FIN_CARTES){
+							attenteCartes = FALSE;
+							mancheEnCours = FALSE;
+						}
+					}
+				}
+			}
+		}
+	}
 	
-	//Set server socket as highest fd
-	fdmax = sck_srv;
+	//définir gagnant tour
+	int max=-1;
+	int idxGagnant=-1;
+	for(i=0;i<MAX_JOUEUR;i++){
+		if(cartes[i] > max){
+			idxGagnant = i;
+			max = cartes[i];
+		}
+	}
+
+	//renvoyer cartes au gagnant
+	char buffCartes[TAILLECONTENU];
+	sprintf(buffCartes,"%d",nbJoueurs);
+	for(i = 0; i < MAX_JOUEUR; i++){
+		if(cartes[i] != -1){
+			sprintf(buffCartes,"%s,%d",buffCartes,cartes[i]);
+		}
+	}
 	
+	//CECI NE FONCTIONNE PAS IdxGagnant est à -1. Je trouve vraiment pas comment faire
+	msg->code=RENVOI_CARTE;
+	sprintf(msg->contenu,"%s",buffCartes);
+	printf("index du gagnant %d\n", idxGagnant);
+	send_msg(sockets[idxGagnant],msg);
+	printf("Le gagant a recu son deck\n");
+
+}
+
+void updateScoresShmem(){
+	int attenteScores = TRUE;
+	fd_set 	read_fds;
+	int sck_cl;
+	int i;
+	int nbJoueurAyantJouer = 0;
+	
+	while(attenteScores){
+		read_fds = all_fds;
+		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("Erreur du select tour.");
+			raise(SIGINT);
+		}
+		
+		for(i = 0; i < FD_SETSIZE; i++){
+			if(FD_ISSET(i,&read_fds)){
+				printf("socket : %d\n",i);
+				if(i == sck_srv){
+					u_int len2 = sizeof(addr2);
+					if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
+						perror("Erreur lors de l'acceptation d'un participant...\n");
+						exit(1);
+					}
+					printf("nouveau joueur mais partie en cours\n");
+					refuserPlayer(i);
+				} else {
+					int retVal;
+					if ((retVal = recv(i, msg, sizeof(struct message), 0)) <= 0) {
+						// got error or connection closed by client
+						if (retVal == 0) {
+							// connection closed
+							printf("selectserver: socket %d hung up\n", i);
+						} else {
+							perror("recv");
+						}
+						onPlayerLeft(i);
+					} else {
+						recv_msg(i);
+						if(msg->code == SCORE_MANCHE){
+							int idxP = getPlayerIndex(i);
+							printf("un joueur a envoyé son score: %d\n", atoi(msg->contenu));
+							nbJoueurAyantJouer++;
+							printf("ici\n");
+							je =  lecteur_memoire();
+							printf("ou ici\n");
+							je->joueurs[idxP].score += atoi(msg->contenu);
+							printf("coucou\n");
+							ecriture_mem_partie(je);									
+							if(nbJoueurAyantJouer == nbJoueurs){
+								printf("tout les joueurs ont donné leurs scores\n");
+								attenteScores = FALSE;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void onPhaseInscription(){
 	//Mask SIGALARM to not interrupt select
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask,SIGALRM);
-
-
-
-
-	//Server ready - Ecoute connection
-	PHASE_INSCRIPTION:;
+	
+	//Init timeval
+	static struct timeval tv;
+	tv.tv_sec = 0;
+    tv.tv_usec = 500000;
+	
+	fd_set read_fds;
+	struct sockaddr_in addr2;
+	char buffer[BUFFER_SIZE];
+	
 	while(phaseInscription){
 		SYS(sigprocmask(SIG_BLOCK, &mask, NULL));
 		
 		read_fds = all_fds; // Reinit read_fds because select modifies it
-        if (select(fdmax+1, &read_fds, NULL, NULL, &tv) == -1) {
+        if (select(FD_SETSIZE+1, &read_fds, NULL, NULL, &tv) == -1) {
             perror("Erreur du select phase inscription.");
             exit(4);
         }
 
 		// parcourir les connexions existantes en recherche d'une connexion à lire
-		int i;
-		for(i = 0; i <= fdmax; i++) {
+		int i, sck_cl;
+		for(i = 0; i <= FD_SETSIZE; i++) {
 			if (FD_ISSET(i, &read_fds)) {
 				// handle new connections
                 if (i == sck_srv) {
                     u_int len2 = sizeof(addr2);
 					if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
 						perror("Erreur lors de l'acceptation d'un participant...\n");
-            			exit(1);
+            			raise(SIGINT);
 					} else {
 						if(nbJoueurs == MAX_JOUEUR) {
 							phaseInscription = FALSE;
@@ -153,14 +371,10 @@ int main(int argc, char** argv){
 							sockets[idx] = sck_cl;
 							printf("Joueur crée : %s et son socket est %d \n",joueurs[idx].pseudo,sockets[idx]);
 							nbJoueurs++;
-							
-							
+								
 							
 							FD_SET(sck_cl, &all_fds); // add to all_fds set
-							
-							if (sck_cl > fdmax) {    // keep track of the max
-								fdmax = sck_cl;
-							}
+						
 							printf("Connexion recue de %s\n",inet_ntoa(addr2.sin_addr));
 														
 							msg->code = EN_ATTENTE;
@@ -192,247 +406,6 @@ int main(int argc, char** argv){
 		//Let alarm execute it's handler
 		SYS(sigprocmask(SIG_UNBLOCK, &mask, NULL));
 	}
-	
-	
-	
-	int annulee = onEndPhaseInscription();
-	
-    if(annulee == -1){
-		resetPartie();
-		goto PHASE_INSCRIPTION;
-	} else {
-		onDebutPartie();
-	}
-	
-	
-							//malloc de jeu + creation de la memoire
-							if ((je = malloc(sizeof(jeu))) == NULL) {
-                            	perror("malloc () jeu : serveur");
-                       		}
-                       		init_memoire(1);
-                       		ecriture_mem_partie(je);
-	
-	//Deroulement de la partie
-	int nbManchesJouees = 0;
-	int nbJoueursRestants = nbJoueurs;
-	int nbJoueurAyantJouer = 0;
-	while(nbManchesJouees < MAX_MANCHES && nbJoueurs > 1){
-		//ajouter logique partie
-		int mancheEnCours = TRUE;
-		//while(mancheEnCours){
-		while(mancheEnCours){
-			//demander cartes
-			int i;
-			printf("jenvoi une demande\n");
-			for(i = 0; i < MAX_JOUEUR; i++){
-				if(sockets[i] != -1){
-					msg->code = JOUER_CARTE;
-					send_msg(sockets[i],msg);
-				}
-			}
-			int attenteCartes = TRUE;
-			int cartes[MAX_JOUEUR];
-			for(i=0;i<MAX_JOUEUR;i++){
-				cartes[i]=-1;
-			}
-			while(attenteCartes){
-				read_fds = all_fds;
-				if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
-					perror("Erreur du select tour.");
-					raise(SIGINT);
-				}
-				for(i = 0; i < FD_SETSIZE; i++){
-					if(FD_ISSET(i,&read_fds)){
-						printf("socket : %d\n",i);
-						if(i == sck_srv){
-							u_int len2 = sizeof(addr2);
-							if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
-								perror("Erreur lors de l'acceptation d'un participant...\n");
-            					exit(1);
-							}
-							printf("nouveau joueur mais partie en cours\n");
-							refuserPlayer(i);
-						} else {
-							
-							int retVal;
-							
-		                    if ((retVal = recv(i, msg, sizeof(struct message), 0)) <= 0) {
-        		                // got error or connection closed by client
-		                        if (retVal == 0) {
-        	                    	// connection closed
-            	                	printf("selectserver: socket %d hung up\n", i);
-								} else {
-									perror("recv");
-								}
-								onPlayerLeft(i);
-							} else {
-								if(msg->code == JOUER_CARTE){
-									int idxP = getPlayerIndex(i);
-									if(cartes[idxP] == -1){
-										printf("un joueur a jouer la carte: %d\n", atoi(msg->contenu));
-										nbJoueurAyantJouer++;
-										cartes[idxP] = atoi(msg->contenu);
-									}
-									if(nbJoueurAyantJouer == nbJoueurs){
-										printf("tout les joueurs ont joué\n");
-										attenteCartes = FALSE;
-									}
-								} else if(msg->code == FIN_CARTES){
-									attenteCartes = FALSE;
-									mancheEnCours = FALSE;
-								}
-							}
-						}
-					}
-				}
-			}
-			//définir gagnant
-			int max=0;
-			int idxGagnant=-1;
-			int idx;
-			for(i=0;i<MAX_JOUEUR;i++){
-				idx = sockets[i];
-				if(cartes[i] > max){
-					idxGagnant= idx;
-					max = cartes[i];
-				}
-			}
-
-			//renvoyer cartes
-			char buffCartes[TAILLECONTENU];
-			sprintf(buffCartes,"%d",nbJoueurs);
-			for(i = 0; i < MAX_JOUEUR; i++){
-				if(cartes[i] != -1){
-					sprintf(buffCartes,"%s,%d",buffCartes,cartes[i]);
-				}
-			}
-			//CECI NE FONCTIONNE PAS IdxGagnant est à -1. Je trouve vraiment pas comment faire
-			msg->code=RENVOI_CARTE;
-			sprintf(msg->contenu,"%s",buffCartes);
-			printf("index du gagnant %d\n", idxGagnant);
-			send_msg(idxGagnant,msg);
-			printf("Le gagant a recu son deck\n");
-
-		}
-		//demander les scores pour la manche
-		//update scores
-		nbManchesJouees++;
-		for(i = 0; i < MAX_JOUEUR; i++){
-				if(sockets[i] != -1){
-					msg->code = FIN_MANCHE;
-					send_msg(sockets[i],msg);
-				}
-			}
-		int attenteScores = TRUE;
-		while(attenteScores){
-				read_fds = all_fds;
-				if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
-					perror("Erreur du select tour.");
-					raise(SIGINT);
-				}
-				
-				for(i = 0; i < FD_SETSIZE; i++){
-					if(FD_ISSET(i,&read_fds)){
-						printf("socket : %d\n",i);
-						if(i == sck_srv){
-							u_int len2 = sizeof(addr2);
-							if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
-								perror("Erreur lors de l'acceptation d'un participant...\n");
-            					exit(1);
-							}
-							printf("nouveau joueur mais partie en cours\n");
-							refuserPlayer(i);
-						} else {
-							
-							int retVal;
-							
-		                    if ((retVal = recv(i, msg, sizeof(struct message), 0)) <= 0) {
-        		                // got error or connection closed by client
-		                        if (retVal == 0) {
-        	                    	// connection closed
-            	                	printf("selectserver: socket %d hung up\n", i);
-								} else {
-									perror("recv");
-								}
-								onPlayerLeft(i);
-							} else {
-								
-								//recv_msg(i);
-								if(msg->code == SCORE_MANCHE){
-									int idxP = getPlayerIndex(i);
-										printf("un joueur a envoyé son score: %d\n", atoi(msg->contenu));
-										nbJoueurAyantJouer++;
-										printf("ici\n");
-										je =  lecteur_memoire();
-										printf("ou ici\n");
-										je->joueurs[idxP].score += atoi(msg->contenu);
-										printf("coucou\n");
-										ecriture_mem_partie(je);									
-									if(nbJoueurAyantJouer == nbJoueurs){
-										printf("tout les joueurs ont donné leurs scores\n");
-										attenteScores = FALSE;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-
-
-		
-		/*	
-		//On lis si il y a un message de la part d'un des joueurs
-		for(i = 0; i < nbJoueurs; i++){
-			if (FD_ISSET(sockets[i], &read_fds)){
-				recv_msg(sockets[i]);
-			}
-			//Si le joueur n'a plus de cartes
-			if(msg->code == FIN_CARTES){
-				printf("Un joueur a perdu !\n");
-				msg->code = FIN_PARTIE;
-				for(i = 0; i < MAX_JOUEUR; i++){
-					int socket = sockets[i];
-					if(socket != -1){
-					send_msg(socket,msg);
-					}
-				}
-			}
-			//Si il y a une deconnexion
-			if(msg->code == DECONNEXION){
-				printf("le joueur %s a quitter la partie\n",joueurs[i].pseudo);
-				joueurs[i].score = -1;
-				nbJoueurs--;
-			}
-			//On verifie qu'il y ai toujours au moins 1 joueur
-			if(nbJoueurs == 1){
-				msg->code=VICTOIRE;
-				for(i = 0; i < MAX_JOUEUR; i++){
-					if(joueurs[i].score != -1){
-						send_msg(sockets[i],msg);
-					}
-				}
-
-			}
-			//Quand tout les joueurs ont joué
-			//On compare leurs cartes
-			if(nbJoueurAyantJouer == MAX_JOUEUR){
-				//Dans ce if, tout les joueurs on un num de carte dans joueurs[i].carte qu'il faut comparer pour voir le gagnant
-			}
-			//Si le joueur jour une carte
-			if(msg->code == JOUER_CARTE){
-				int numCarte = atoi(msg->contenu);
-				joueurs[i].carte = numCarte;
-				nbJoueurAyantJouer++;
-			}
-		}
-	*/
-
-	// Pour recuperer la memoire partagee :    je = lecteur_memoire();
-	// Apres tu la modifies a souhait, ensuite tu la sauves ! ecriture_mem_partie(je);
-	}
-	//fin de la partie
 }
 
 int getPlayerIndex(int socket){
@@ -463,7 +436,7 @@ void checkLockFile(){
 	}
 }
 
-void onDebutPartie(){
+void distribuerCartes(){
 	//Debut partie
 	
 	//Creation du deck de carte
@@ -517,7 +490,7 @@ void onDebutPartie(){
 			}
 		}
 	}
-	printf("fin methode onDebutPartie\n");
+	printf("fin methode distribuerCartes\n");
 }
 
 void sendDeck(int socket, int* deck, int nbCartes){
@@ -565,7 +538,7 @@ void resetPartie(){
 	}
 	
 	//reinit shmem
-	
+		
 	//reinit nbJoueurs
 	nbJoueurs = 0;
 	

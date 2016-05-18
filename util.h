@@ -46,7 +46,7 @@
 
 #define TAILLECONTENU 256
 
-#define MAX_MANCHES 3
+#define MAX_MANCHES 5
 
 #define LOCK_FLE ".~myprecious"
 
