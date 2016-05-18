@@ -67,12 +67,12 @@ int main(int argc, char** argv){
 	//Creation d'un signal pour lors d'un ctrl c, on kill la shm
 	struct sigaction actionInt;
 	actionInt.sa_handler = INThandler;
-	SYS(sigaction(SIGINT,&actionInt,0));
+	SYS(sigaction(SIGINT,&actionInt,NULL));
 	
 	//Creation d'un handler pour le timer
 	struct sigaction actionAlarm;
 	actionAlarm.sa_handler = onTimerEnd;
-	SYS(sigaction(SIGALRM,&actionAlarm,0));
+	SYS(sigaction(SIGALRM,&actionAlarm,NULL));
 	
 	//Init time	
 	srand(time(NULL));
@@ -329,18 +329,18 @@ void onPhaseInscription(){
 	fd_set read_fds;
 	struct sockaddr_in addr2;
 	char buffer[BUFFER_SIZE];
-	
+	int sck_cl;
 	while(phaseInscription){
 		SYS(sigprocmask(SIG_BLOCK, &mask, NULL));
 		
-		read_fds = all_fds; // Reinit read_fds because select modifies it
+		read_fds = all_fds;
         if (select(FD_SETSIZE+1, &read_fds, NULL, NULL, &tv) == -1) {
             perror("Erreur du select phase inscription.");
             exit(4);
         }
 
 		// parcourir les connexions existantes en recherche d'une connexion à lire
-		int i, sck_cl;
+		int i;
 		for(i = 0; i <= FD_SETSIZE; i++) {
 			if (FD_ISSET(i, &read_fds)) {
 				// handle new connections
@@ -534,18 +534,34 @@ int onEndPhaseInscription(){
 }
 
 void resetPartie(){
+	
+	printf("réinitialisation des variables \n");	
 	phaseInscription = TRUE;
+	phaseInscription = TRUE;
+	mancheEnCours = TRUE;
+	nbJoueurs = 0;
+	nbManchesJouees = 0;
+
+	printf("réinitialisation et fermeture des sockets \n");
 	//reinit sockets[]
 	int i;
 	for(i = 0; i < MAX_JOUEUR; i++){
+		int sck = sockets[i];
+		if(sck != -1){
+			close(sck);
+		}
 		sockets[i] = -1;
 	}
 	
+	printf("réinitialisation de la mémoire partagée \n");
 	//reinit shmem
-		
-	//reinit nbJoueurs
-	nbJoueurs = 0;
+	for(i = 0; i < MAX_JOUEUR; i++){
+		sprintf(je->joueurs[i].pseudo,"");
+		je->joueurs[i].score = 0;
+	}
+	ecriture_mem_partie(je);
 	
+	printf("réinitialisation du set des fd \n");
 	//reinit set all_fds
 	FD_ZERO(&all_fds);
 	FD_SET(sck_srv,&all_fds);
@@ -599,11 +615,22 @@ void send_msg(int sck, struct message *msg){
 }
 
 void  INThandler(int sig){
-	signal(sig, SIG_IGN);
+	printf("fermeture des sockets.\n");
+	int i;
+	for(i = 0; i < MAX_JOUEUR; i++){
+		int sck = sockets[i];
+		if(sck != -1){
+			close(sck);
+		}
+	}
+	printf("sockets fermés.\n");
 	printf("fermeture memoire partagee.\n");
 	fermeture_memoire();
+	printf("mémoire partagée fermée.\n");
 	printf("suppression fichier lock.\n");
 	remove(LOCK_FLE);
+	printf("fichier lock supprimé");
+	printf("fermeture du programme.\n");
 	exit(2);
 }
 
