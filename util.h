@@ -39,6 +39,7 @@
 #define SCORE_MANCHE 11
 #define FIN_MANCHE 12
 #define VICTOIRE 13
+#define PARTIE_EN_COURS 14
 
 #define NB_CARTES 52
 
@@ -46,6 +47,7 @@
 
 #define MAX_MANCHES 5
 
+#define LOCK_FLE ".~myprecious"
 
 typedef struct message {
 	int code;

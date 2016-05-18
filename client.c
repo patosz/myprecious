@@ -25,6 +25,9 @@ int main(int argc, char** argv){
 	int ecritureRet;
 	int lectureRet;
 	char buffer[BUFFER_SIZE];
+
+
+	check_args(&argc, argv);
 	
 	//Creation d'un signal pour lors d'un ctrl c, on kill la shm
 	struct sigaction actionInt;
@@ -37,8 +40,6 @@ int main(int argc, char** argv){
 	SYS(sigaction(SIGPIPE,&actionPipe,0));
 	
 
-	check_args(&argc, argv);
-	
 	get_socket();
 
 	get_host(argv[1]);
@@ -66,12 +67,17 @@ int main(int argc, char** argv){
 
 	fd_set rfds;
 	while(1){
+		int retSel;
 		FD_ZERO(&rfds);
         FD_SET(sck, &rfds);
 
-        if(select(sck + 1, &rfds, NULL, NULL, NULL) < 0){
+        if((retSel = select(sck + 1, &rfds, NULL, NULL, NULL)) < 0){
         	perror("select()-client ");
-        }
+        } else if(retSel == 0){
+			perror("serveur down.");
+			raise(SIGINT);
+		}
+		
         if (FD_ISSET(sck, &rfds)){
         	msg = recevoir_msg(msg);
         	handleMessage(msg);
@@ -201,23 +207,58 @@ void onDebutPartie(){
 }
 
 void onFinPartie(){
+	
+}
+
+void onFinCartes(){
+	msg->code = FIN_CARTES;
+	envoyer_msg(msg);
+}
+
+void onJouerCarte(){
+	printf("Voici votre deck : \n");
+	int i;
+	for(i = 0; i < NB_CARTES; i++){
+		if(deck[i] != -1){
+			int card = deck[i];
+			printf("%d : %c%c \n",i,getFigure(card),getCouleur(card));
+		}
+	}
+	int choix = -1;
+	char buff[256];
+	do{
+		printf("Quelle carte voulez-vous jouer ?");
+		if(fgets(buff,256*sizeof(char),stdin) != NULL && (choix = atoi(buff)) > 0 && choix < NB_CARTES && deck[choix] != -1){
+			break;
+		} else {
+			printf("Choix invalide.\n");
+		}
+	}while(1);
+	int card = deck[choix];
+	deck[choix] = -1;
+	nbCartesDeck--;
+	
+	msg->code = JOUER_CARTE;
+	sprintf(msg->contenu,"%d",card);
+	envoyer_msg(msg);
 
 }
 
-void onJouerCarte(){}
-
 void onEnvoiDeck(char* contenu){
+	printf("Cartes reçues. \n");
 	//premier strtok pour le nombre de cartes
-	//nbCartesDeck = strtok(contenu,",");
+	nbCartesDeck = atoi(strtok(contenu,","));
+	
 	//remplir deck
-	//int i;
-	//for(i = 0; i < nbCartesDeck; i++){
-	//	deck[i] = strtok(NULL,",");
-	//}
+	int i;
+	for(i = 0; i < nbCartesDeck;i++){
+		deck[i] = atoi(strtok(NULL,","));
+	}
+	printf("Vous avez une main de %d cartes.\n",nbCartesDeck);
 }
 
 void onRenvoiCarte(char* contenu){
-
+	printf("Vous remportez le tour.\n");
 }
 
 void onScoreManche(){
@@ -241,7 +282,7 @@ void onExit(){
 
 void lectureScores(){
 	//On recup la memoire
-		jeu *partie;
+	jeu *partie;
 	partie = lecteur_memoire();
 	printf("Voici la liste des scores actuels\n");
 	int i;

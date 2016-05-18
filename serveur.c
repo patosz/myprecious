@@ -14,15 +14,14 @@ static joueur joueurs[MAX_JOUEUR];
 static int sockets[MAX_JOUEUR];
 static struct message *msg;
 static fd_set all_fds;
-
+static int sck_srv;
+	
 int main(int argc, char** argv){
 
+	checkLockFile();
+
 	jeu *je;
-    
-	//TODO ajouter un fichier de lock et vérifier son exitence pour ne pas lancer 2 fois le serveur
-	//xav: j'ai rajoute un exit dans le bind(). Car si bind renvoi -1 c'est que le port est deja utilise
 	
-	int sck_srv;
 	int sck_cl;
     int nbrefds;
 	int fdmax;
@@ -104,7 +103,9 @@ int main(int argc, char** argv){
 	sigemptyset(&mask);
 	sigaddset(&mask,SIGALRM);
 
+
 	//Server ready - Ecoute connection
+	PHASE_INSCRIPTION:;
 	while(phaseInscription){
 		SYS(sigprocmask(SIG_BLOCK, &mask, NULL));
 		
@@ -118,8 +119,8 @@ int main(int argc, char** argv){
 		int i;
 		for(i = 0; i <= fdmax; i++) {
 			if (FD_ISSET(i, &read_fds)) {
+				// handle new connections
                 if (i == sck_srv) {
-					// handle new connections
                     u_int len2 = sizeof(addr2);
 					if((sck_cl = accept(sck_srv,(struct sockaddr *)&addr2,&len2)) < 0){
 						perror("Erreur lors de l'acceptation d'un participant...\n");
@@ -132,7 +133,7 @@ int main(int argc, char** argv){
 							break;
 						}
 						
-						msg = lire_msg(sck_cl,msg);
+						msg = recv_msg(sck_cl,msg);
 						if(msg->code == CONNEXION){
 							strcpy(buffer, msg->contenu);
 							fprintf(stdout, "Un joueur s'est inscrit, voici son nom : %s\n", buffer);
@@ -149,13 +150,15 @@ int main(int argc, char** argv){
 							joueurs[idx] = j;
 							sockets[idx] = sck_cl;
 							nbJoueurs++;
-
+							
+							/*
 							//malloc de jeu + creation de la memoire
 							if ((je = malloc(sizeof(jeu))) == NULL) {
                             	perror("malloc () jeu : serveur");
                        		}
                        		init_memoire(1);
                        		ecriture_mem_partie(je);
+							*/
 							
 							FD_SET(sck_cl, &all_fds); // add to all_fds set
 							
@@ -165,7 +168,7 @@ int main(int argc, char** argv){
 							printf("Connexion recue de %s\n",inet_ntoa(addr2.sin_addr));
 														
 							msg->code = EN_ATTENTE;
-							ecrire_msg(sck_cl,msg);
+							send_msg(sck_cl,msg);
 						}
                     }
                 } else {
@@ -179,10 +182,10 @@ int main(int argc, char** argv){
                         } else {
                             perror("recv");
                         }
-						onPlayerLeftInscription(i);
+						onPlayerLeft(i);
                     } else {
                         // we got some data from a client
-						msg = lire_msg(i,msg);
+						msg = recv_msg(i,msg);
 						
 						//TODO ajouter le traitement d'un message reçu mais normalement aucun message ne devrait être reçu
                     }
@@ -194,59 +197,48 @@ int main(int argc, char** argv){
 		SYS(sigprocmask(SIG_UNBLOCK, &mask, NULL));
 	}
 	
-	printf("La phase d'inscription est terminée.\n");
 	
-	if(nbJoueurs >= MIN_JOUEUR){
-		msg->code = DEBUT_PARTIE;
-	} else {
-		msg->code = PARTIE_ANNULEE;
-	}
-	for(i = 0; i < MAX_JOUEUR; i++){
-		int socket = sockets[i];
-		if(socket != -1){
-			ecrire_msg(socket,msg);
-		}
-	}
 	
-	if(nbJoueurs < MIN_JOUEUR){
+	int annulee = onEndPhaseInscription();
+	
+    if(annulee == -1){
 		resetPartie();
-		printf("exit au lieu de reset partie \n");
-		exit(1);
+		goto PHASE_INSCRIPTION;
+	} else {
+		onDebutPartie();
 	}
 	
-	//Debut partie
-	int nbJoueurAyantJouer=0;
-	//Creation du deck de carte
-	int deck[52];
-	int t;
-	for(t=0;t<52;t++){
-		deck[t]=t;
-	}
-	shuffle(deck,52);
-	//Si 2 joueurs
-	if(nbJoueurs == 2){
-		int deck1[26];
-		int deck2[26];
-		for(t=0;t<52/2;t++){
-			deck1[t]=deck[t];
-		}
-		int z;
-		for(z=0;z<52/2;z++){
-			deck2[z]=deck[t];
-			t++;
-		}
-		//On envoi le deck au 2 joueurs
-		
-
-	}
-
-	while(1){
+	
+	
+	//Deroulement de la partie
+	int nbManchesJouees = 0;
+	int nbJoueursRestants = nbJoueurs;
+	int nbJoueurAyantJouer = 0;
+	while(nbManchesJouees < MAX_MANCHES && nbJoueurs > 1){
 		//ajouter logique partie
-
+		int mancheEnCours = TRUE;
+		while(mancheEnCours){
+			//demander cartes
+			int i;
+			for(i = 0; i < MAX_JOUEUR; i++){
+				if(sockets[i] != -1){
+					msg->code = JOUER_CARTE;
+					send_msg(sockets[i],msg);
+				}
+			}
+			//définir gagnant
+			//renvoyer cartes
+			//si je reçois pas de cartes, mancheEnCours false
+		}
+		//demander les scores pour la manche
+		//update scores
+		nbManchesJouees++;
+		
+		/*	
 		//On lis si il y a un message de la part d'un des joueurs
 		for(i = 0; i < nbJoueurs; i++){
 			if (FD_ISSET(sockets[i], &read_fds)){
-				msg = lire_msg(sockets[i],msg);
+				msg = recv_msg(sockets[i],msg);
 			}
 			//Si le joueur n'a plus de cartes
 			if(msg->code == FIN_CARTES){
@@ -255,7 +247,7 @@ int main(int argc, char** argv){
 				for(i = 0; i < MAX_JOUEUR; i++){
 					int socket = sockets[i];
 					if(socket != -1){
-					ecrire_msg(socket,msg);
+					send_msg(socket,msg);
 					}
 				}
 			}
@@ -270,7 +262,7 @@ int main(int argc, char** argv){
 				msg->code=VICTOIRE;
 				for(i = 0; i < MAX_JOUEUR; i++){
 					if(joueurs[i].score != -1){
-						ecrire_msg(sockets[i],msg);
+						send_msg(sockets[i],msg);
 					}
 				}
 
@@ -286,21 +278,144 @@ int main(int argc, char** argv){
 				joueurs[i].carte = numCarte;
 				nbJoueurAyantJouer++;
 			}
-	}
+		}
+	*/
 
 	// Pour recuperer la memoire partagee :    je = lecteur_memoire();
 	// Apres tu la modifies a souhait, ensuite tu la sauves ! ecriture_mem_partie(je);
+	}
 }
+
+void refuserPlayer(int socket){
+	msg->code = PARTIE_EN_COURS;
+	send_msg(socket,msg);
+}
+
+void checkLockFile(){
+	FILE *fp = fopen (LOCK_FLE, "r");
+	if (fp != NULL){
+		fclose (fp);
+		perror("Le serveur est déjà lancé. \n");
+		exit(15);	
+	} else {
+		fp = fopen(LOCK_FLE,"w");
+		fclose(fp);
+	}
+}
+
+void onDebutPartie(){
+	//Debut partie
+	
+	//Creation du deck de carte
+	int deck[NB_CARTES];
+	
+	int t;
+	for(t=0;t<NB_CARTES;t++){
+		deck[t]=t;
+	}
+	
+	shuffle(deck,NB_CARTES);
+	
+	//Composer et envoyer les decks
+	if(nbJoueurs == 3){
+		int cardsLeft = NB_CARTES;
+		int nbCardsPlayer = cardsLeft / nbJoueurs;
+		int i, j, h = 0;
+		int lastPlayer = 0;
+		for(i = 0; i < nbJoueurs; i++){
+			if(i == nbJoueurs-1){
+				cardsLeft = nbCardsPlayer;
+			}
+			
+			int deckP[nbCardsPlayer];
+			for(j = 0;j<nbCardsPlayer;j++, h++){
+				deckP[j] = deck[h];
+			}
+			cardsLeft -= nbCardsPlayer;
+			for(;lastPlayer < MAX_JOUEUR;lastPlayer++){
+				if(sockets[lastPlayer] != -1){
+					sendDeck(sockets[lastPlayer],deckP, nbCardsPlayer);
+					break;
+				}
+			}
+		}
+	} else {
+		int nbCardsPlayer = NB_CARTES / nbJoueurs;
+		int i, j, h = 0;
+		int lastPlayer = 0;
+		for(i = 0; i < nbJoueurs; i++){
+			int deckP[nbCardsPlayer];
+			for(j = 0;j<nbCardsPlayer;j++, h++){
+				deckP[j] = deck[h];
+			}
+			for(;lastPlayer < MAX_JOUEUR;lastPlayer++){
+				if(sockets[lastPlayer] != -1){
+					sendDeck(sockets[lastPlayer],deckP, nbCardsPlayer);
+					lastPlayer++;
+					break;
+				}
+			}
+		}
+	}
+}
+
+void sendDeck(int socket, int* deck, int nbCartes){
+	char buffer[TAILLECONTENU];
+	int i;
+	sprintf(buffer,"%d,",nbCartes);
+	for(i = 0; i < nbCartes; i++){
+		sprintf(buffer,"%s,%d",buffer,*(deck+i));
+	}
+	msg->code = ENVOI_DECK;
+	sprintf(msg->contenu,"%s",buffer);
+	send_msg(socket,msg);
+	printf("Cartes envoyées sur socket %d.\n",socket);
+}
+
+int onEndPhaseInscription(){
+	printf("La phase d'inscription est terminée.\n");
+
+	//Check si debut partie ou annulation partie et envoyer msg adequat
+	msg->code = (nbJoueurs >= MIN_JOUEUR) ? DEBUT_PARTIE : PARTIE_ANNULEE;  
+
+	int i;
+	for(i = 0; i < MAX_JOUEUR; i++){
+		int socket = sockets[i];
+		if(socket != -1){
+			send_msg(socket,msg);
+		}
+	}
+	
+	//If partie annulee, reset la partie à 0
+	if(nbJoueurs < MIN_JOUEUR){
+		printf("La partie est annulée et sera réinitialisée.\n");
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
 void resetPartie(){
+	phaseInscription = TRUE;
 	//reinit sockets[]
+	int i;
+	for(i = 0; i < MAX_JOUEUR; i++){
+		sockets[i] = -1;
+	}
+	
 	//reinit shmem
+	
 	//reinit nbJoueurs
+	nbJoueurs = 0;
+	
 	//reinit set all_fds
+	FD_ZERO(&all_fds);
+	FD_SET(sck_srv,&all_fds);
+	
+	printf("Partie réinitialisée.\n");
 }
 
-void onPlayerLeftInscription(int cl_socket){
+void onPlayerLeft(int cl_socket){
 	int i, idx;
 	for(i = 0; i < MAX_JOUEUR; i++){
 		if(sockets[i] == cl_socket){
@@ -323,7 +438,7 @@ int getFreePlace(){
 	return -1;
 }
 
-struct message* lire_msg(int sck,struct message *msg){
+struct message* recv_msg(int sck,struct message *msg){
 	int lectureRet;
 	if((lectureRet = recv(sck,msg,sizeof(struct message),0)) == -1){
 		perror("erreur lecture client\n");
@@ -332,7 +447,7 @@ struct message* lire_msg(int sck,struct message *msg){
 	return msg;
 }
 
-void ecrire_msg(int sck, struct message *msg){
+void send_msg(int sck, struct message *msg){
 	int ecritureRet;
 	if((ecritureRet = send(sck,msg,sizeof(struct message),0)) == -1){
 		perror("Erreur ecriture server\n");
@@ -342,8 +457,10 @@ void ecrire_msg(int sck, struct message *msg){
 
 void  INThandler(int sig){
 	signal(sig, SIG_IGN);
-	printf("fermeture memoire partager\n");
+	printf("fermeture memoire partagee.\n");
 	fermeture_memoire();
+	printf("suppression fichier lock.\n");
+	remove(LOCK_FLE);
 	exit(2);
 }
 

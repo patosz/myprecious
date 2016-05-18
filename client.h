@@ -21,6 +21,7 @@
 #include    <sys/socket.h>
 #include    <sys/types.h>
 
+#include "cartes.h"
 #include "util.h"
 #include "shm.h"
 

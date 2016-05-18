@@ -7,7 +7,6 @@
 */
 #if !defined SERVER_H
 #define SERVER_H
-
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -36,13 +35,18 @@
 #include "shm.h"
 #include "util.h"
 
-struct message* lire_msg(int sck,struct message *msg);
-void ecrire_msg(int sck, struct message *msg);
+struct message* recv_msg(int sck,struct message *msg);
+void send_msg(int sck, struct message *msg);
 void INThandler(int sig);
 void onTimerEnd();
-void onPlayerLeftInscription(int cl_socket);
+void onPlayerLeft(int cl_socket);
 int getFreePlace();
 void resetPartie();
+void shuffle(int *array, size_t n);
+void onDebutPartie();
+void sendDeck(int socket, int* deck, int nbCartes);
+void checkLockFile();
+int onEndPhaseInscription();
 void shuffle(int *array, size_t n);
 
 #endif
