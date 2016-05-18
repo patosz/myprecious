@@ -127,15 +127,39 @@ int main(int argc, char** argv){
 
 void jouerJeu(){
 	//Deroulement de la partie
-	int nbJoueursRestants = nbJoueurs;
-	int nbJoueurAyantJouer = 0;
 	while(nbManchesJouees < maxManches && nbJoueurs > 1){
 		jouerManche();
 	}
-	//TODO déterminer gagnant
+	
+	int max = -1, idx = -1,i;
+	if(nbJoueurs == 1){
+		for(i = 0; i < MAX_JOUEUR; i ++){
+			if(sockets[i] != -1){
+				idx = i;
+			}
+		}
+	} else{
+		//TODO déterminer gagnant
+		lecteur_memoire(je);
+		for(i = 0; i < MAX_JOUEUR; i ++){
+			if(je->joueurs[i].score > max){
+				max = je->joueurs[i].score;
+				idx = i;
+			}
+		}
+	}
 	//TODO envoyer victoire au gagnant
+	msg->code = VICTOIRE;
+	send_msg(sockets[idx],msg);
 	//TODO envoyer fin de partie à ttlm
+	msg->code = FIN_PARTIE;
+	for(i = 0; i < MAX_JOUEUR; i ++){
+		if(sockets[i] != -1){
+			send_msg(sockets[i],msg);
+		}
+	}
 	//TODO reset partie
+	resetPartie();
 }
 
 void jouerManche(){
@@ -157,7 +181,7 @@ void jouerManche(){
 void jouerTour(){
 	//demander cartes
 	int i;
-	printf("jenvoi une demande\n");
+	printf("début tour\n");
 	for(i = 0; i < MAX_JOUEUR; i++){
 		if(sockets[i] != -1){
 			msg->code = JOUER_CARTE;
@@ -175,7 +199,7 @@ void jouerTour(){
 	struct sockaddr_in addr2;
 	fd_set 	read_fds;
 	int nbJoueurAyantJouer = 0;
-	while(attenteCartes){
+	while(attenteCartes && nbJoueurAyantJouer < nbJoueurs){
 		read_fds = all_fds;
 		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("Erreur du select tour.");
@@ -250,7 +274,7 @@ void jouerTour(){
 	sprintf(msg->contenu,"%s",buffCartes);
 	printf("index du gagnant %d\n", idxGagnant);
 	send_msg(sockets[idxGagnant],msg);
-	printf("Le gagant a recu son deck\n");
+	printf("Le gagant du tour a recu les cartes\n");
 
 }
 
