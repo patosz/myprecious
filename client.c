@@ -235,21 +235,8 @@ void onFinCartes(){
 }
 
 void onJouerCarte(){
-	int i;
-	//Si plus aucune carte
-	if(nbCartesDeck == 0 && nbCartesDefausse == 0){
-		msg->code = FIN_CARTES;
-		printf("Vous n'avez plus de carte\n");
-		envoyer_msg(msg);
-		return;
-	//Si encore de la carte dans la reserve
-	}else if( nbCartesDeck == 0){
-		memcpy(deck,defausse,nbCartesDefausse);
-		nbCartesDeck = nbCartesDefausse;
-		nbCartesDefausse=0;
-	}
 	printf("Voici votre deck : \n");
-	
+	int i;
 	for(i = 0; i < tailleDeck; i++){
 		if(deck[i] != -1){
 			int card = deck[i];
@@ -277,6 +264,20 @@ void onJouerCarte(){
 	msg->code = JOUER_CARTE;
 	sprintf(msg->contenu,"%d",card);
 	envoyer_msg(msg);
+	
+	
+	//Si plus aucune carte
+	if(nbCartesDeck == 0 && nbCartesDefausse == 0){
+		msg->code = FIN_CARTES;
+		printf("Vous n'avez plus de carte\n");
+		envoyer_msg(msg);
+		return;
+	//Si encore de la carte dans la reserve
+	}else if( nbCartesDeck == 0){
+		memcpy(deck,defausse,nbCartesDefausse);
+		nbCartesDeck = nbCartesDefausse;
+		nbCartesDefausse=0;
+	}
 }
 
 void onEnvoiDeck(char* contenu){
@@ -296,9 +297,12 @@ void onEnvoiDeck(char* contenu){
 
 void onRenvoiCarte(char* contenu){
 	int nbCartes = atoi(strtok(contenu,","));
+	printf("Cartes reçues : %d\n",nbCartes);
 	int i;
 	for(i = 0; i < nbCartes; i++){
-		defausse[nbCartesDefausse+i] = atoi(strtok(NULL,","));
+		int card = atoi(strtok(NULL,","));
+		printf("ajout carte dans defausse : %d\n",card);
+		defausse[nbCartesDefausse+i] = card;
 	}
 	nbCartesDefausse += nbCartes;
 	printf("Vous remportez le tour.\n");

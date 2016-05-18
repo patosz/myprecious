@@ -128,6 +128,7 @@ int main(int argc, char** argv){
 void jouerJeu(){
 	//Deroulement de la partie
 	while(nbManchesJouees < maxManches && nbJoueurs > 1){
+		mancheEnCours = TRUE;
 		jouerManche();
 	}
 	
@@ -199,6 +200,7 @@ void jouerTour(){
 	struct sockaddr_in addr2;
 	fd_set 	read_fds;
 	int nbJoueurAyantJouer = 0;
+	int finCartes = FALSE;
 	while(attenteCartes && nbJoueurAyantJouer < nbJoueurs){
 		read_fds = all_fds;
 		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) == -1) {
@@ -241,8 +243,7 @@ void jouerTour(){
 								attenteCartes = FALSE;
 							}
 						} else if(msg->code == FIN_CARTES){
-							attenteCartes = FALSE;
-							mancheEnCours = FALSE;
+							finCartes = TRUE;
 						}
 					}
 				}
@@ -275,6 +276,10 @@ void jouerTour(){
 	printf("index du gagnant %d\n", idxGagnant);
 	send_msg(sockets[idxGagnant],msg);
 	printf("Le gagant du tour a recu les cartes\n");
+	
+	if(finCartes){
+		mancheEnCours = FALSE;
+	}
 
 }
 
